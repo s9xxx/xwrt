@@ -382,13 +382,24 @@ jobs:
           # 主题 header.ut 里 vantage.rail 默认 pinned —— 菜单文字默认展开，无需额外补丁
           echo "✔ vantage 主题就绪（菜单文字默认展开）"
 
-          # 2) 去掉 x-wrt 默认主题 bootstrap（及其配置 app），并清掉 argon 残留
+          # 2) 先删掉 x-wrt 默认主题 bootstrap（及其配置 app）和 argon 残留
           rm -rf feeds/luci/themes/luci-theme-bootstrap \
                  feeds/luci/applications/luci-app-argon-config \
                  feeds/luci/themes/luci-theme-argon 2>/dev/null || true
-          # 从 feeds 索引里移除，避免 defconfig 仍看到 bootstrap 符号
-          find feeds/luci -type d \( -name 'luci-theme-bootstrap' -o -name 'luci-theme-argon' \) -prune -exec rm -rf {} + 2>/dev/null || true
-          echo "✔ 已移除 x-wrt 默认主题 bootstrap / argon"
+
+          # 3) 关键：luci / luci-light 集合的 apk 元数据里硬依赖 luci-theme-bootstrap，
+          #    直接删包会让 package/install 阶段 apk 报
+          #    "luci-theme-bootstrap (no such package) required by luci-light" 而全平台失败。
+          #    先把 feeds 里所有对这些主题的“依赖引用”改写成 vantage（依赖由 vantage 满足），
+          #    这样既去掉了 bootstrap，又不破坏 luci 集合的依赖解析。
+          find feeds/luci -type f \( -name 'Makefile' -o -name '*.mk' \) -print0 2>/dev/null \
+            | xargs -0 -r sed -i \
+                -e 's/luci-theme-bootstrap/luci-theme-vantage/g' \
+                -e 's/luci-theme-argon/luci-theme-vantage/g' \
+                -e 's/luci-app-argon-config/luci-app-vantage/g'
+          # 清掉 feeds 索引里可能残留的空目录，避免 defconfig 仍看到 bootstrap/argon 符号
+          find feeds/luci -type d \( -name 'luci-theme-bootstrap' -o -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) -prune -exec rm -rf {} + 2>/dev/null || true
+          echo "✔ 已移除 bootstrap/argon 主题，依赖已改指向 vantage（避免 apk 悬空依赖）"
 
       - name: 生成 .config（本平台机型 + vantage 主题 + 自动规避 Kconfig 递归依赖）
         env:
