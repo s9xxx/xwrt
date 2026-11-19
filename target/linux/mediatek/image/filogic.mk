@@ -5381,6 +5381,7 @@ define Device/bt_rb300
   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += bt_rb300
 
 define Device/cetron_ct3003-mod
   DEVICE_VENDOR := Cetron
@@ -5395,6 +5396,7 @@ define Device/cetron_ct3003-mod
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += cetron_ct3003-mod
 
 define Device/cmcc_a10-mod
   DEVICE_VENDOR := CMCC
@@ -5409,6 +5411,7 @@ define Device/cmcc_a10-mod
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware
 endef
+TARGET_DEVICES += cmcc_a10-mod
 
 define Device/cudy_tr3000-mod
   DEVICE_VENDOR := Cudy
@@ -5424,6 +5427,7 @@ define Device/cudy_tr3000-mod
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   DEVICE_PACKAGES := kmod-usb3 kmod-mt7981-firmware mt7981-wo-firmware
 endef
+TARGET_DEVICES += cudy_tr3000-mod
 
 define Device/cudy_tr3000-v1-256mb
   DEVICE_VENDOR := Cudy
@@ -5440,6 +5444,7 @@ define Device/cudy_tr3000-v1-256mb
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount
 endef
+TARGET_DEVICES += cudy_tr3000-v1-256mb
 
 define Device/fzs_5gcpe-p3
   DEVICE_VENDOR := FZS
@@ -5454,6 +5459,7 @@ define Device/fzs_5gcpe-p3
   DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += fzs_5gcpe-p3
 
 define Device/huasifei_wh3000-emmc
   DEVICE_VENDOR := Huasifei
@@ -5471,6 +5477,7 @@ define Device/huasifei_wh3000-emmc
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += huasifei_wh3000-emmc
 
 define Device/huasifei_ws3006
   DEVICE_VENDOR := Huasifei
@@ -5486,6 +5493,7 @@ define Device/huasifei_ws3006
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += huasifei_ws3006
 
 define Device/huasifei_ws3009
   DEVICE_VENDOR := Huasifei
@@ -5501,6 +5509,7 @@ define Device/huasifei_ws3009
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += huasifei_ws3009
 
 define Device/livinet_zr-3020
   DEVICE_VENDOR := Livinet
@@ -5522,6 +5531,7 @@ define Device/livinet_zr-3020
   KERNEL_INITRAMFS = kernel-bin | lzma | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
 endef
+TARGET_DEVICES += livinet_zr-3020
 
 define Device/mediatek_7981r128
   DEVICE_VENDOR := MediaTek
@@ -5539,6 +5549,7 @@ define Device/mediatek_7981r128
   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += mediatek_7981r128
 
 define Device/sl_3000-emmc
   DEVICE_VENDOR := SL
@@ -5552,6 +5563,7 @@ define Device/sl_3000-emmc
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += sl_3000-emmc
 
 define Device/superelectron_zn-m5-stock
   DEVICE_VENDOR := SuperElectron
@@ -5577,6 +5589,7 @@ define Device/superelectron_zn-m5-stock
   KERNEL_INITRAMFS = kernel-bin | lzma | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
 endef
+TARGET_DEVICES += superelectron_zn-m5-stock
 
 define Device/umi_uax3000e
   DEVICE_VENDOR := UMI
@@ -5590,6 +5603,7 @@ define Device/umi_uax3000e
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += umi_uax3000e
 
 define Device/wirelesstag_zx7981pd
   DEVICE_VENDOR := Wireless-Tag
@@ -5608,6 +5622,7 @@ define Device/wirelesstag_zx7981pd
   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += wirelesstag_zx7981pd
 
 define Device/wirelesstag_zx7981pg
   DEVICE_VENDOR := Wireless-Tag
@@ -5626,6 +5641,7 @@ define Device/wirelesstag_zx7981pg
   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += wirelesstag_zx7981pg
 
 define Device/ruijie_ew-6000gx-pro
   DEVICE_VENDOR := Ruijie
@@ -5637,6 +5653,7 @@ define Device/ruijie_ew-6000gx-pro
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_ew-6000gx-pro
 
 define Device/ruijie_ew-6000gx-pro-expand
   DEVICE_VENDOR := Ruijie
@@ -5648,6 +5665,7 @@ define Device/ruijie_ew-6000gx-pro-expand
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_ew-6000gx-pro-expand
 
 define Device/ruijie_ew-6000gx-pro-stock
   DEVICE_VENDOR := Ruijie
@@ -5659,6 +5677,7 @@ define Device/ruijie_ew-6000gx-pro-stock
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_ew-6000gx-pro-stock
 
 define Device/clx_s20l
   DEVICE_VENDOR := CLX
@@ -5676,6 +5695,7 @@ define Device/clx_s20l
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += clx_s20l
 
 define Device/hf_m7986r1-emmc
   DEVICE_VENDOR := HF
@@ -5689,6 +5709,7 @@ define Device/hf_m7986r1-emmc
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   SUPPORTED_DEVICES += HF-M7986R1
 endef
+TARGET_DEVICES += hf_m7986r1-emmc
 
 define Device/hf_m7986r1-nand
   DEVICE_VENDOR := HF
@@ -5703,6 +5724,7 @@ define Device/hf_m7986r1-nand
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   SUPPORTED_DEVICES += HF-M7986R1
 endef
+TARGET_DEVICES += hf_m7986r1-nand
 
 define Device/jdcloud_re-cs-05
   DEVICE_VENDOR := JDCloud
@@ -5713,6 +5735,7 @@ define Device/jdcloud_re-cs-05
   DEVICE_PACKAGES := e2fsprogs f2fsck mkf2fs kmod-mt7986-firmware mt7986-wo-firmware
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += jdcloud_re-cs-05
 
 define Device/ruijie_rg-x60-new
   DEVICE_VENDOR := Ruijie
@@ -5724,6 +5747,7 @@ define Device/ruijie_rg-x60-new
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_rg-x60-new
 
 define Device/ruijie_rg-x60-new-expand
   DEVICE_VENDOR := Ruijie
@@ -5735,6 +5759,7 @@ define Device/ruijie_rg-x60-new-expand
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_rg-x60-new-expand
 
 define Device/ruijie_rg-x60-new-stock
   DEVICE_VENDOR := Ruijie
@@ -5746,12 +5771,14 @@ define Device/ruijie_rg-x60-new-stock
   DEVICE_PACKAGES := kmod-phy-airoha-en8811h
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += ruijie_rg-x60-new-stock
 
 define Device/supergateway_s20l
   $(call Device/supergateway_s20-common)
   DEVICE_MODEL := S20L
   DEVICE_DTS := mt7986a-supergateway-s20l
 endef
+TARGET_DEVICES += supergateway_s20l
 
 define Device/supergateway_s20m
   $(call Device/supergateway_s20-common)
@@ -5759,12 +5786,14 @@ define Device/supergateway_s20m
   DEVICE_DTS := mt7986a-supergateway-s20m
   DEVICE_PACKAGES += -kmod-mt7915e -kmod-mt7986-firmware -wpad-openssl
 endef
+TARGET_DEVICES += supergateway_s20m
 
 define Device/supergateway_s20p
   $(call Device/supergateway_s20-common)
   DEVICE_MODEL := S20P
   DEVICE_DTS := mt7986a-supergateway-s20p
 endef
+TARGET_DEVICES += supergateway_s20p
 
 define Device/yvr_x6
   DEVICE_VENDOR := DaZoo
@@ -5779,6 +5808,7 @@ define Device/yvr_x6
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
+TARGET_DEVICES += yvr_x6
 
 define Device/cmcc_rax3000me-emmc
   DEVICE_VENDOR := CMCC
