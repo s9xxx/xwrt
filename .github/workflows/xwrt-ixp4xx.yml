@@ -668,8 +668,7 @@ jobs:
     name: 📦 发布 Release
     needs: [prepare, build]
     if: |
-      always() && !cancelled() &&
-      (github.event_name == 'schedule' || inputs.make_release)
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载全部产物
