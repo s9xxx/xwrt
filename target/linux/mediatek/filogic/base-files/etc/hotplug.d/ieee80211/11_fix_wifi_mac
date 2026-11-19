@@ -116,6 +116,7 @@ case "$board" in
 	cudy,p2-v1|\
 	cudy,re3000-v1|\
 	cudy,tr3000-256mb-v1|\
+	cudy,tr3000-512mb-v1|\
 	cudy,tr3000-v1|\
 	cudy,tr3000-v1-ubootmod|\
 	cudy,wr3000u-v1|\
