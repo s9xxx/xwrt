@@ -1,0 +1,427 @@
+name: 🧱 X-Wrt TP-Link WMA301 系列固件编译
+
+# 每周六 11:00（北京时间 UTC+8）自动编译
+# GitHub 的 cron 使用 UTC：周六 03:00 UTC = 周六 11:00 北京时间
+#
+# 机型移植自 s9xxx/immortalwrt-mt798x-6.6（MT7981B + SPI-NAND），矩阵覆盖三种布局：
+#   tplink_wma301        WMA301（ubi 114M，KERNEL_IN_UBI + sysupgrade-tar）
+#   tplink_wma301-stock  WMA301（原厂布局，ubi 64M）
+#   tplink_wma301_2_1    WMA301 2.1（原厂布局，ubi 64M）
+#   -ubootmod 未移植：需要 u-boot-mediatek 的 tplink_wma301 板级配置，本仓库暂无
+#
+# 主题统一为 luci-theme-vantage，argon 及其配置 app 在构建时移除。
+on:
+  schedule:
+    - cron: '0 3 * * 6'
+  workflow_dispatch:
+    inputs:
+      devices:
+        description: '机型（逗号分隔，留空=全部三个）'
+        required: false
+        default: 'tplink_wma301,tplink_wma301-stock,tplink_wma301_2_1'
+      packages:
+        description: '额外固件包（空格分隔，可留空）'
+        required: false
+        default: ''
+      make_release:
+        description: '是否发布到 Release'
+        required: false
+        default: true
+        type: boolean
+      use_ccache:
+        description: '是否使用 ccache 加速（首次编译会更慢）'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: xwrt-wma301-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  TZ: Asia/Shanghai
+  TARGET: mediatek
+  SUBTARGET: filogic
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 4G
+
+jobs:
+  prepare:
+    name: 🧭 解析机型
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - name: 生成机型矩阵
+        id: plan
+        env:
+          DEVICE_INPUT: ${{ inputs.devices || '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          meta = {
+              'tplink_wma301': ('TP-Link WMA301', 'mt7981b-tplink-wma301'),
+              'tplink_wma301-stock': ('TP-Link WMA301 (stock layout)', 'mt7981b-tplink-wma301-stock'),
+              'tplink_wma301_2_1': ('TP-Link WMA301 2.1', 'mt7981b-tplink-wma301_2.1'),
+          }
+          raw = (os.environ.get('DEVICE_INPUT') or '').replace('，', ',')
+          devs = [d.strip() for d in raw.split(',') if d.strip()] or list(meta)
+          bad = [d for d in devs if d not in meta]
+          if bad:
+              raise SystemExit('未知机型: %s（可选: %s）' % (' '.join(bad), ' '.join(meta)))
+          inc = [{'device': d, 'name': meta[d][0], 'dts': meta[d][1]} for d in devs]
+          out = open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8')
+          out.write('matrix=%s\n' % json.dumps({'include': inc}))
+          out.write('count=%d\n' % len(inc))
+          out.close()
+          print('机型矩阵:', json.dumps(inc, ensure_ascii=False))
+          PY
+
+  build:
+    name: 🏗️ ${{ matrix.name }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      DEVICE: ${{ matrix.device }}
+
+    steps:
+      - name: Checkout 源码（本仓库）
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: 记录源码版本
+        id: srcver
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 释放磁盘空间
+        run: |
+          echo "===== 释放前 ====="; df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache /usr/local/share/boost \
+                      /usr/local/lib/node_modules /usr/lib/jvm \
+                      /usr/share/swift /usr/share/miniconda /usr/share/rust \
+                      /usr/share/kotlinc /usr/share/gradle-* /opt/az \
+                      /usr/local/.ghcup /var/lib/snapd /usr/local/share/chromium \
+                      /opt/microsoft /usr/share/sbt 2>/dev/null || true
+          sudo systemctl stop docker docker.socket 2>/dev/null || true
+          sudo rm -rf /var/lib/docker /var/lib/containerd 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/* /home/runner/.cache \
+                      /home/runner/.npm /home/runner/.dotnet 2>/dev/null || true
+          sudo journalctl --vacuum-size=50M 2>/dev/null || true
+          echo "===== 释放后 ====="; df -h / | tail -1
+
+      - name: 安装编译依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+            libelf-dev python3-dev python3-setuptools rsync unzip zlib1g-dev \
+            file wget ccache zstd swig time xsltproc subversion bc patch bzip2 \
+            libtool-bin pkg-config autoconf automake
+          sudo apt-get install -y -qq perl libthread-queue-any-perl 2>/dev/null || true
+
+      - name: 恢复 ccache
+        if: ${{ inputs.use_ccache != false }}
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-xwrt-wma301-${{ matrix.device }}-${{ steps.srcver.outputs.sha }}
+          restore-keys: |
+            ccache-xwrt-wma301-${{ matrix.device }}-
+            ccache-xwrt-mediatek-
+
+      - name: ccache 预热配置
+        if: ${{ inputs.use_ccache != false }}
+        run: |
+          ccache --version | head -1
+          ccache -M "$CCACHE_MAXSIZE"
+          ccache -z
+
+      - name: 机型适配自检
+        env:
+          DTS: ${{ matrix.dts }}
+        run: |
+          set -e
+          echo "机型: $DEVICE / 设备树: $DTS.dts"
+          test -f "target/linux/mediatek/dts/$DTS.dts" \
+            || { echo "::error::缺少设备树 $DTS.dts"; exit 1; }
+          test -f target/linux/mediatek/dts/mt7981b-tplink-wma301-common.dtsi \
+            || { echo "::error::缺少 WMA301 公共 dtsi"; exit 1; }
+          grep -q '#include "mt7981b.dtsi"' "target/linux/mediatek/dts/$DTS.dts" \
+            || echo "::warning::$DTS.dts 未直接包含 mt7981b.dtsi（走 common dtsi 继承则正常）"
+          python3 - "$DEVICE" <<'PY'
+          import re, sys
+          dev = sys.argv[1]
+          text = open('target/linux/mediatek/image/filogic.mk', encoding='utf-8').read()
+          m = re.search(r'define Device/%s\n(.*?)\nendef' % re.escape(dev), text, re.S)
+          if not m:
+              sys.exit('filogic.mk 缺少 %s 设备块' % dev)
+          body = m.group(1)
+          for key in ('KERNEL_IN_UBI := 1', 'IMAGE/factory.bin', 'IMAGE/sysupgrade.bin := sysupgrade-tar'):
+              if key not in body:
+                  sys.exit('%s 设备块缺少 %s' % (dev, key))
+          if '\t' in body:
+              sys.exit('%s 设备块里仍有行内 TAB（会导致 Missing Build/）' % dev)
+          print('✔ 设备块结构检查通过')
+          PY
+          grep -q "tplink,wma301" target/linux/mediatek/filogic/base-files/etc/board.d/02_network \
+            || { echo "::error::02_network 未登记 tplink,wma301*"; exit 1; }
+          grep -q "tplink,wma301" target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac \
+            || { echo "::error::11_fix_wifi_mac 未登记 tplink,wma301*"; exit 1; }
+          echo "✔ 机型适配自检通过"
+
+      - name: 更新 feeds（带重试）
+        run: |
+          set -o pipefail
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds update -a 2>&1 | tee feeds-update.log | tail -15; then ok=1; break; fi
+            echo "::warning::feeds update 第 $i 次失败，10 秒后重试"
+            grep -iE "fatal|error|not found|404" feeds-update.log | head -10 || true
+            sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds update 连续 3 次失败"; exit 1; }
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds install -a 2>&1 | tee feeds-install.log | tail -5; then ok=1; break; fi
+            echo "::warning::feeds install 第 $i 次失败，10 秒后重试"
+            sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds install 失败"; exit 1; }
+
+      - name: 注入 vantage 主题并移除 argon / bootstrap
+        run: |
+          set -e
+          rm -rf /tmp/kiddin9
+          git clone -q --depth 1 --filter=blob:none --sparse \
+            https://github.com/kiddin9/op-packages.git /tmp/kiddin9
+          (cd /tmp/kiddin9 && git sparse-checkout set luci-theme-vantage luci-app-vantage)
+          cp -a /tmp/kiddin9/luci-theme-vantage /tmp/kiddin9/luci-app-vantage package/
+          test -f package/luci-theme-vantage/Makefile || { echo "::error::vantage 主题包缺失"; exit 1; }
+          echo "✔ vantage 主题已加入 package/"
+
+          rm -rf feeds/luci/themes/luci-theme-argon \
+                 feeds/luci/applications/luci-app-argon-config \
+                 feeds/luci/themes/luci-theme-bootstrap 2>/dev/null || true
+
+          find feeds/luci -type f \( -name 'Makefile' -o -name '*.mk' \) -print0 2>/dev/null \
+            | xargs -0 -r sed -i \
+                -e 's/luci-theme-bootstrap/luci-theme-vantage/g' \
+                -e 's/luci-theme-argon/luci-theme-vantage/g' \
+                -e 's/luci-app-argon-config/luci-app-vantage/g'
+          find feeds/luci -type d \( -name 'luci-theme-bootstrap' -o -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
+            -prune -exec rm -rf {} + 2>/dev/null || true
+          echo "✔ 已移除 argon / bootstrap，依赖已改指向 vantage"
+
+          mkdir -p files/etc/uci-defaults
+          cat > files/etc/uci-defaults/99-default-theme-vantage <<'EOF'
+          #!/bin/sh
+          uci -q get luci.main >/dev/null 2>&1 || uci set luci.main=core
+          uci set luci.main.mediaurlbase='/luci-static/vantage'
+          uci commit luci
+          exit 0
+          EOF
+          chmod +x files/etc/uci-defaults/99-default-theme-vantage
+          echo "✔ 默认主题已锁定为 luci-theme-vantage"
+
+      - name: 生成 .config（${{ matrix.name }} + vantage 主题）
+        env:
+          PACKAGES: ${{ inputs.packages || '' }}
+        run: |
+          set -e
+          cat > .config <<EOF
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_filogic=y
+          # 单机型：直接选 choice 成员（不带 DEVICE_ 前缀），TARGET_PROFILE 由 kconfig 自动推导
+          CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          CONFIG_TARGET_ROOTFS_PARTSIZE=1024
+          # ---- 主题：vantage 为默认，argon / bootstrap 关闭 ----
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-compat=y
+          CONFIG_PACKAGE_luci-theme-vantage=y
+          CONFIG_PACKAGE_luci-app-vantage=y
+          # CONFIG_PACKAGE_luci-theme-argon is not set
+          # CONFIG_PACKAGE_luci-app-argon-config is not set
+          # CONFIG_PACKAGE_luci-theme-bootstrap is not set
+          # ---- WiFi：完整 wpad + 无线驱动 + 监管数据库 ----
+          # CONFIG_PACKAGE_wpad-basic-wolfssl is not set
+          # CONFIG_PACKAGE_wpad-basic-mbedtls is not set
+          CONFIG_PACKAGE_wpad-wolfssl=y
+          CONFIG_PACKAGE_kmod-mt7915e=y
+          CONFIG_PACKAGE_kmod-mt7981-firmware=y
+          CONFIG_PACKAGE_mt7981-wo-firmware=y
+          CONFIG_PACKAGE_wireless-regdb=y
+          CONFIG_PACKAGE_iwinfo=y
+          CONFIG_PACKAGE_luci-mod-network=y
+          # ---- 中文界面 ----
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_LUCI_LANG_en=y
+          # ---- 常用组件 ----
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_kmod-mtd-rw=y
+          CONFIG_PACKAGE_block-mount=y
+          CONFIG_PACKAGE_automount=y
+          EOF
+          if [ -n "$PACKAGES" ]; then
+            for p in $PACKAGES; do echo "CONFIG_PACKAGE_$p=y" >> .config; done
+          fi
+
+          make -j1 defconfig > defconfig.log 2>&1 || { tail -40 defconfig.log; echo "::error::make defconfig 失败"; exit 1; }
+
+          echo "===== 关键配置校验（$DEVICE）====="
+          grep -E 'CONFIG_TARGET_PROFILE|CONFIG_TARGET_mediatek_filogic_DEVICE_'"$DEVICE"'|CONFIG_PACKAGE_luci-theme-vantage|CONFIG_PACKAGE_luci-theme-argon|CONFIG_PACKAGE_wpad' .config || true
+
+          fail=0
+          grep -q "CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y" .config || { echo "::error::机型符号 $DEVICE 未启用"; fail=1; }
+          grep -q "CONFIG_TARGET_PROFILE=\"DEVICE_$DEVICE\"" .config || { echo "::error::TARGET_PROFILE 未指向 DEVICE_$DEVICE"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-vantage=y' .config || { echo "::error::默认主题 vantage 未选中"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-argon=y' .config && { echo "::error::argon 主题仍然存在"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-app-argon-config=y' .config && { echo "::error::argon 配置 app 仍然存在"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-bootstrap=y' .config && { echo "::error::bootstrap 主题仍被选中"; fail=1; }
+          grep -qE '^CONFIG_PACKAGE_wpad(-basic|-mesh)?(-wolfssl|-mbedtls|-openssl)?=y$' .config || { echo "::error::缺少 wpad，固件会没有 WiFi 功能"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_kmod-mt7915e=y' .config || { echo "::error::缺少 MT7915E 无线驱动"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_wireless-regdb=y' .config || { echo "::error::缺少 wireless-regdb"; fail=1; }
+          [ "$fail" = "0" ] || exit 1
+          echo "✔ .config 校验通过（含 WiFi 组件）"
+
+      - name: 预下载软件包
+        run: make download -j8 || echo "::warning::make download 有失败项，构建时会重试"
+
+      - name: 编译
+        run: |
+          set -o pipefail
+          echo "机型: $DEVICE | 并发数: $(nproc)"
+          df -h / | tail -1
+          rc=0
+          make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j"$(( $(nproc) + 1 ))" 2>&1 | tee build.log || rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::并行编译失败，用 -j1 V=s 重跑捕获真实错误"
+            FAILED=$(grep -oE "ERROR: \S+ failed to build( \(build variant: \S+\))?" build.log | awk '{print $2}' | sort -u || true)
+            if [ -z "$FAILED" ]; then
+              make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j1 V=s 2>&1 | tee error.log || true
+            else
+              for p in $FAILED; do
+                case "$p" in
+                  package/*) echo "===== V=s 复现 $p ====="; make -j1 V=s "$p/compile" 2>&1 | tee -a error.log || true ;;
+                  *) echo "===== V=s 复现 target ====="; make -j1 V=s 2>&1 | tee -a error.log || true ;;
+                esac
+              done
+            fi
+            echo "===== error.log 尾部 150 行 ====="
+            tail -n 150 error.log 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: 失败诊断
+        if: failure()
+        run: |
+          for f in defconfig.log feeds-update.log feeds-install.log build.log error.log; do
+            [ -f "$f" ] && { echo "===== $f （尾部 40 行） ====="; tail -40 "$f" || true; }
+          done
+          head -15 .config 2>/dev/null || true
+
+      - name: 上传编译日志（失败时用于排查）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.device }}
+          path: |
+            *.log
+            .config
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 校验并收集产物
+        run: |
+          set -e
+          mkdir -p out
+          DIR="bin/targets/$TARGET/$SUBTARGET"
+          echo "产物目录: $DIR"; ls -la "$DIR" 2>/dev/null | head -20 || true
+          find "$DIR" -maxdepth 1 -type f \
+            \( -name "*$DEVICE*" -o -name 'sha256sums' -o -name 'profiles.json' \) \
+            -exec cp {} out/ \; 2>/dev/null || true
+          ls -lh out || true
+          ls out/*"$DEVICE"*sysupgrade* >/dev/null 2>&1 \
+            || { echo "::error::$DEVICE 没有产出 sysupgrade 镜像"; exit 1; }
+          ls out/*"$DEVICE"*factory* >/dev/null 2>&1 \
+            || { echo "::error::$DEVICE 缺少 factory 镜像（NAND 机型必须双产物）"; exit 1; }
+          (cd out && sha256sum * > sha256sums.local.txt)
+          {
+            echo "## 🏗️ ${{ matrix.name }}"
+            echo ""
+            echo "- 机型符号: \`$DEVICE\` / 设备树: \`${{ matrix.dts }}\`"
+            echo "- 源码: ${{ steps.srcver.outputs.sha }}"
+            echo "- 主题: luci-theme-vantage（默认，已移除 argon / bootstrap）"
+            echo ""
+            echo "| 文件 | 大小 |"
+            echo "|---|---|"
+            ls -l out | awk 'NR>1 {printf "| %s | %s |\n", $9, $5}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: images-${{ matrix.device }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: 📦 发布 Release
+    needs: build
+    if: |
+      github.event_name == 'schedule' || inputs.make_release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 下载全部机型产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: images-*
+          merge-multiple: true
+          path: rel
+
+      - name: 创建 Release（xwrt-wma301-日期，同日重跑自动加 -r<run号>）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd rel
+          ls -lh
+          TAG="xwrt-wma301-$(TZ=Asia/Shanghai date +%Y%m%d)"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            TAG="$TAG-r${GITHUB_RUN_NUMBER}"
+          fi
+          cat > notes.md <<EOF
+          X-Wrt 自动编译 · TP-Link WMA301 系列（移植自 s9xxx/immortalwrt-mt798x-6.6）
+
+          - 触发方式: ${{ github.event_name }}
+          - 覆盖机型: tplink_wma301 / tplink_wma301-stock / tplink_wma301_2_1
+          - 主题: luci-theme-vantage（默认；已移除 argon / bootstrap）
+          - WiFi: 完整 wpad + MT7915E + wireless-regdb
+          - 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          NAND 机型为 KERNEL_IN_UBI + sysupgrade-tar，factory 用于首次刷入；
+          刷机前请确认设备型号与布局（stock/2.1 与原厂分区表对应）。
+          漏发 Release 时，可用 publish-artifact-release.yml 按 run_id 补发。
+          EOF
+          gh release create "$TAG" ./* \
+            --title "X-Wrt TP-Link WMA301 · $TAG" \
+            --notes-file ${{ github.workspace }}/rel/notes.md \
+            --latest
