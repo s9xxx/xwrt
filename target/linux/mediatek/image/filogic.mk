@@ -5360,3 +5360,434 @@ define Device/tplink_wma301_2_1
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
 endef
 TARGET_DEVICES += tplink_wma301_2_1
+
+# ============================================================================
+# MT798x 其余机型（移植自 s9xxx/immortalwrt-mt798x-6.6，NAND/UBI + sysupgrade-tar 为主）
+# ============================================================================
+
+define Device/bt_rb300
+  DEVICE_VENDOR := BT
+  DEVICE_MODEL := BT-RB300
+  DEVICE_DTS := mt7981b-bt-rb300
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += bt_rb300
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 112640k
+  KERNEL_IN_UBI := 1  
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/cetron_ct3003-mod
+  DEVICE_VENDOR := Cetron
+  DEVICE_MODEL := CT3003 (U-Boot mod)
+  DEVICE_DTS := mt7981b-cetron-ct3003-mod
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cetron_ct3003-mod
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/cmcc_a10-mod
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := A10 (U-Boot mod)
+  DEVICE_DTS := mt7981b-cmcc-a10-mod
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc_a10-mod
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware
+endef
+
+define Device/cudy_tr3000-mod
+  DEVICE_VENDOR := Cudy
+  DEVICE_MODEL := TR3000
+  DEVICE_VARIANT := (U-Boot mod)
+  DEVICE_DTS := mt7981b-cudy-tr3000-mod
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cudy_tr3000-mod
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7981-firmware mt7981-wo-firmware
+endef
+
+define Device/cudy_tr3000-v1-256mb
+  DEVICE_VENDOR := Cudy
+  DEVICE_MODEL := TR3000
+  DEVICE_VARIANT := v1 256mb
+  DEVICE_DTS := mt7981b-cudy-tr3000-v1-256mb
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += R103
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 235520k
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount
+endef
+
+define Device/fzs_5gcpe-p3
+  DEVICE_VENDOR := FZS
+  DEVICE_MODEL := 5GCPE P3
+  DEVICE_DTS := mt7981b-fzs-5gcpe-p3
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += fzs_5gcpe-p3
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/huasifei_wh3000-emmc
+  DEVICE_VENDOR := Huasifei
+  DEVICE_MODEL := WH3000 eMMC
+  DEVICE_ALT0_VENDOR := Fudy
+  DEVICE_ALT0_MODEL := MT3000
+  DEVICE_DTS := mt7981b-huasifei-wh3000-emmc
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += huasifei_wh3000-emmc
+  DEVICE_PACKAGES :=  \
+	kmod-usb-net-cdc-mbim kmod-usb-net-qmi-wwan kmod-usb-serial-option \
+	kmod-usb3 automount f2fsck mkf2fs uqmi
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/huasifei_ws3006
+  DEVICE_VENDOR := Huasifei
+  DEVICE_MODEL := WS3006
+  DEVICE_DTS := mt7981b-huasifei-ws3006
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += huasifei_ws3006
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 112640k
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/huasifei_ws3009
+  DEVICE_VENDOR := Huasifei
+  DEVICE_MODEL := WS3009
+  DEVICE_DTS := mt7981b-huasifei-ws3009
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += huasifei_ws3009
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 112640k
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/livinet_zr-3020
+  DEVICE_VENDOR := Livinet
+  DEVICE_MODEL := ZR-3020
+  DEVICE_VARIANT := (stock layout)
+  DEVICE_DTS := mt7981b-livinet-zr-3020
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += mediatek,mt7981-spim-snand-gsw-rfb
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 65536k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  KERNEL = kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS = kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
+endef
+
+define Device/mediatek_7981r128
+  DEVICE_VENDOR := MediaTek
+  DEVICE_MODEL := 7981r128
+  DEVICE_DTS := mt7981b-mediatek-7981r128
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+  SUPPORTED_DEVICES += mediatek,7981r128
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 114688k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/sl_3000-emmc
+  DEVICE_VENDOR := SL
+  DEVICE_MODEL := 3000 eMMC
+  DEVICE_DTS := mt7981b-sl-3000-emmc
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += sl_3000-emmc
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/superelectron_zn-m5-stock
+  DEVICE_VENDOR := SuperElectron
+  DEVICE_MODEL := ZN-M5
+  DEVICE_VARIANT := (stock layout)
+  DEVICE_ALT0_VENDOR := SuperElectron
+  DEVICE_ALT0_MODEL := ZN-M8
+  DEVICE_ALT0_VARIANT := (stock layout)
+  DEVICE_DTS := mt7981b-superelectron-zn-m5-stock
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += mediatek,mt7981-spim-snand-rfb
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 65536k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  KERNEL = kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS = kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
+endef
+
+define Device/umi_uax3000e
+  DEVICE_VENDOR := UMI
+  DEVICE_MODEL := UAX3000E
+  DEVICE_DTS := mt7981b-umi-uax3000e
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += umi_uax3000e
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc mmc-utils
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/wirelesstag_zx7981pd
+  DEVICE_VENDOR := Wireless-Tag
+  DEVICE_MODEL := ZX7981PD
+  DEVICE_DTS := mt7981b-wirelesstag-zx7981pd
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += wirelesstag_zx7981pd
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware kmod-usb3 mt7981-wo-firmware
+  DEVICE_DTS_LOADADDR := 0x44000000
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 51200k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/wirelesstag_zx7981pg
+  DEVICE_VENDOR := Wireless-Tag
+  DEVICE_MODEL := ZX7981PG
+  DEVICE_DTS := mt7981b-wirelesstag-zx7981pg
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += wirelesstag_zx7981pg
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware kmod-usb3 mt7981-wo-firmware
+  DEVICE_DTS_LOADADDR := 0x44000000
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 51200k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_ew-6000gx-pro
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := EW-6000GX Pro
+  DEVICE_DTS := mt7986a-ruijie-ew-6000gx-pro
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_ew-6000gx-pro
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_ew-6000gx-pro-expand
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := EW-6000GX Pro (Expand)
+  DEVICE_DTS := mt7986a-ruijie-ew-6000gx-pro-expand
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_ew-6000gx-pro-expand
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_ew-6000gx-pro-stock
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := EW-6000GX Pro (Stock)
+  DEVICE_DTS := mt7986a-ruijie-ew-6000gx-pro-stock
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_ew-6000gx-pro-stock
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/clx_s20l
+  DEVICE_VENDOR := CLX
+  DEVICE_MODEL := S20L
+  DEVICE_DTS := mt7986a-clx-s20l
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += clx_s20l
+  DEVICE_DTS_LOADADDR := 0x47000000
+  DEVICE_PACKAGES := automount e2fsprogs f2fsck mkf2fs kmod-usb3 \
+	kmod-mt7986-firmware mt7986-wo-firmware
+  IMAGES := sysupgrade.bin
+  KERNEL := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/hf_m7986r1-emmc
+  DEVICE_VENDOR := HF
+  DEVICE_MODEL := M7986R1 (eMMC)
+  DEVICE_DTS := mt7986a-hf-m7986r1-emmc
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7921e kmod-usb-net-rndis kmod-usb-serial-option f2fsck mkf2fs
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  SUPPORTED_DEVICES += HF-M7986R1
+endef
+
+define Device/hf_m7986r1-nand
+  DEVICE_VENDOR := HF
+  DEVICE_MODEL := M7986R1 (NAND)
+  DEVICE_DTS := mt7986a-hf-m7986r1-nand
+  DEVICE_DTS_DIR := ../dts
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7921e kmod-usb-net-rndis kmod-usb-serial-option
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  SUPPORTED_DEVICES += HF-M7986R1
+endef
+
+define Device/jdcloud_re-cs-05
+  DEVICE_VENDOR := JDCloud
+  DEVICE_MODEL := AX6000
+  DEVICE_DTS := mt7986a-jdcloud-re-cs-05
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += jdcloud_re-cs-05
+  DEVICE_PACKAGES := e2fsprogs f2fsck mkf2fs kmod-mt7986-firmware mt7986-wo-firmware
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_rg-x60-new
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X60 New
+  DEVICE_DTS := mt7986a-ruijie-rg-x60-new
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_rg-x60-new
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_rg-x60-new-expand
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X60 New (Expand)
+  DEVICE_DTS := mt7986a-ruijie-rg-x60-new-expand
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_rg-x60-new-expand
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/ruijie_rg-x60-new-stock
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X60 New (Stock)
+  DEVICE_DTS := mt7986a-ruijie-rg-x60-new-stock
+  DEVICE_DTS_CONFIG := config@ruijie_x60_gsw_en8811h_phy
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie_rg-x60-new-stock
+  DEVICE_PACKAGES := kmod-phy-airoha-en8811h
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/supergateway_s20l
+  $(call Device/supergateway_s20-common)
+  DEVICE_MODEL := S20L
+  DEVICE_DTS := mt7986a-supergateway-s20l
+endef
+
+define Device/supergateway_s20m
+  $(call Device/supergateway_s20-common)
+  DEVICE_MODEL := S20M
+  DEVICE_DTS := mt7986a-supergateway-s20m
+  DEVICE_PACKAGES += -kmod-mt7915e -kmod-mt7986-firmware -wpad-openssl
+endef
+
+define Device/supergateway_s20p
+  $(call Device/supergateway_s20-common)
+  DEVICE_MODEL := S20P
+  DEVICE_DTS := mt7986a-supergateway-s20p
+endef
+
+define Device/yvr_x6
+  DEVICE_VENDOR := DaZoo
+  DEVICE_MODEL := yvr-x6 (ax6000)
+  DEVICE_DTS := mt7986a-yvr-x6
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += yvr_x6
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 automount
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  BLOCKSIZE := 256k
+  PAGESIZE := 4096
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/cmcc_rax3000me-emmc
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := RAX3000Me (eMMC version)
+  DEVICE_DTS := mt7981b-cmcc-rax3000me
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc,rax3000me-emmc
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 f2fsck mkf2fs
+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += cmcc_rax3000me-emmc

@@ -8,7 +8,66 @@ mediatek_setup_interfaces()
 	local board="$1"
 
 	case $board in
-	abt,asr3000|\
+	
+	bt,rb300)
+		ucidef_set_interfaces_lan_wan "lan0 lan1 lan2 lan3" wan
+
+		;;
+	cetron,ct3003-mod|\
+	cmcc,a10-mod|\
+	cudy,tr3000-mod|\
+	cudy,tr3000-v1-256mb|\
+	fzs,5gcpe-p3|\
+	huasifei,ws3009|\
+	livinet,zr-3020|\
+	mediatek,7981r128|\
+	sl,3000-emmc|\
+	superelectron,zn-m5-stock|\
+	umi,uax3000e|\
+	wirelesstag,zx7981pd|\
+	ruijie,ew-6000gx-pro|\
+	ruijie,ew-6000gx-pro-expand|\
+	ruijie,ew-6000gx-pro-stock|\
+	clx,s20l|\
+	hf,m7986r1-emmc|\
+	ruijie,rg-x60-new|\
+	ruijie,rg-x60-new-expand|\
+	ruijie,rg-x60-new-stock|\
+	supergateway,s20l|\
+	supergateway,s20m|\
+	cmcc,rax3000me)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" wan
+
+		;;
+	huasifei,wh3000-emmc)
+		ucidef_set_interfaces_lan_wan eth0 eth1
+
+		;;
+	huasifei,ws3006)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 eth1" wan
+
+		;;
+	wirelesstag,zx7981pg)
+		ucidef_set_interfaces_lan_wan "lan1 lan2" wan
+
+		;;
+	hf,m7986r1-nand)
+		ucidef_set_interfaces_lan_wan "lan2 lan3 lan4" "lan1 usb0"
+
+		;;
+	jdcloud,re-cs-05)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" eth1
+
+		;;
+	supergateway,s20p)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6" eth1
+
+		;;
+	yvr,x6)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" wan
+
+		;;
+abt,asr3000|\
 	buffalo,wsr-6000ax8|\
 	abt,asr3000-ubootlayout|\
 	cmcc,xr30-emmc|\
@@ -337,7 +396,33 @@ mediatek_setup_macs()
 	local label_mac=""
 
 	case $board in
-	airpi,ap3000m)
+	
+	mediatek,7981r128)
+		local label_mac=$(mtd_get_mac_binary Factory 0x4)
+		lan_mac=$(macaddr_add $label_mac 1)
+		wan_mac=$(macaddr_add $label_mac -1)
+
+		;;
+	umi,uax3000e)
+		lan_mac=$(mmc_get_mac_binary factory 0x2A)
+		wan_mac=$(mmc_get_mac_binary factory 0x04)
+
+		;;
+	ruijie,rg-x60-new|\
+	ruijie,rg-x60-new-expand|\
+	ruijie,rg-x60-new-stock)
+		label_mac=$(mtd_get_mac_ascii product_info ethaddr)
+		wan_mac=$label_mac
+		lan_mac=$(macaddr_add "$label_mac" 1)
+
+		;;
+	yvr,x6)
+		wan_mac=$(mtd_get_mac_ascii Factory_info MAC)
+		lan_mac=$(macaddr_add $wan_mac 1)
+		label_mac=$lan_mac
+
+		;;
+airpi,ap3000m)
 		base_mac=$(macaddr_generate_from_mmc_cid mmcblk0)
 		lan_mac="$base_mac"
 		wan_mac="$(macaddr_add "$base_mac" 1)"

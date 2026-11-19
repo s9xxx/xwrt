@@ -277,6 +277,42 @@ platform_do_upgrade() {
 	local board=$(board_name)
 
 	case "$board" in
+	bt,rb300|\
+	cetron,ct3003-mod|\
+	cmcc,a10-mod|\
+	cudy,tr3000-mod|\
+	cudy,tr3000-v1-256mb|\
+	fzs,5gcpe-p3|\
+	huasifei,wh3000-emmc|\
+	huasifei,ws3006|\
+	huasifei,ws3009|\
+	livinet,zr-3020|\
+	mediatek,7981r128|\
+	sl,3000-emmc|\
+	superelectron,zn-m5-stock|\
+	umi,uax3000e|\
+	wirelesstag,zx7981pd|\
+	wirelesstag,zx7981pg|\
+	ruijie,ew-6000gx-pro|\
+	ruijie,ew-6000gx-pro-expand|\
+	ruijie,ew-6000gx-pro-stock|\
+	clx,s20l|\
+	hf,m7986r1-emmc|\
+	hf,m7986r1-nand|\
+	jdcloud,re-cs-05|\
+	ruijie,rg-x60-new|\
+	ruijie,rg-x60-new-expand|\
+	ruijie,rg-x60-new-stock|\
+	supergateway,s20l|\
+	supergateway,s20m|\
+	supergateway,s20p|\
+	yvr,x6|\
+	cmcc,rax3000me)
+		nand_do_platform_check "$board" "$1"
+		return $?
+
+		;;
+
 	cmcc,rax3000m-emmc-ubootlayout)
 		cmcc_rax3000m_emmc_check_image "$1" || exit 1
 		CI_KERNPART="kernel"
@@ -561,6 +597,47 @@ platform_check_image() {
 	[ "$#" -gt 1 ] && return 1
 
 	case "$board" in
+	bt,rb300|\
+	cetron,ct3003-mod|\
+	cmcc,a10-mod|\
+	cudy,tr3000-mod|\
+	cudy,tr3000-v1-256mb|\
+	fzs,5gcpe-p3|\
+	huasifei,wh3000-emmc|\
+	huasifei,ws3006|\
+	huasifei,ws3009|\
+	livinet,zr-3020|\
+	mediatek,7981r128|\
+	sl,3000-emmc|\
+	superelectron,zn-m5-stock|\
+	umi,uax3000e|\
+	wirelesstag,zx7981pd|\
+	wirelesstag,zx7981pg|\
+	ruijie,ew-6000gx-pro|\
+	ruijie,ew-6000gx-pro-expand|\
+	ruijie,ew-6000gx-pro-stock|\
+	clx,s20l|\
+	hf,m7986r1-emmc|\
+	hf,m7986r1-nand|\
+	jdcloud,re-cs-05|\
+	ruijie,rg-x60-new|\
+	ruijie,rg-x60-new-expand|\
+	ruijie,rg-x60-new-stock|\
+	supergateway,s20l|\
+	supergateway,s20m|\
+	supergateway,s20p|\
+	yvr,x6)
+		nand_do_platform_check "$board" "$1"
+		return $?
+
+		;;
+	cmcc,rax3000me)
+		if [ "$CI_METHOD" = "emmc" ]; then
+			emmc_copy_config
+		fi
+
+		;;
+
 	cmcc,rax3000m-emmc-ubootlayout)
 		cmcc_rax3000m_emmc_check_image "$1"
 		return $?

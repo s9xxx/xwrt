@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * 兼容层：mainline 的 mt7986a SoC dtsi 在 ethernet 节点里内置 gmac0/gmac1（mt7986 还带 mdio），
+ * 而 immortalwrt-mt798x-6.6 用的是 MediaTek SDK 风格 dtsi，这些节点由各机身 dts 自己定义。
+ * 从 lede 移植过来的 dts 只写 "&gmac0 { ... }" 覆盖，所以在这里补上基础节点。
+ */
+
+&eth {
+	status = "okay";
+
+	gmac0: mac@0 {
+		compatible = "mediatek,eth-mac";
+		reg = <0>;
+		phy-mode = "2500base-x";
+	};
+
+	gmac1: mac@1 {
+		compatible = "mediatek,eth-mac";
+		reg = <1>;
+		phy-mode = "2500base-x";
+	};
+
+	mdio: mdio-bus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+};
