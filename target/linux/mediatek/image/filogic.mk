@@ -1339,6 +1339,93 @@ define Device/cmcc_rax3000m-nand-ubootlayout
 endef
 TARGET_DEVICES += cmcc_rax3000m-nand-ubootlayout
 
+# ============================================================================
+# CMCC XR30 / RAX3000M 硬改 256M（移植自 tvliving/Kwrt 的 xr30 系列方案）
+#  - 128M 机型：U-Boot mod 布局（kernel FIT 落 UBI 卷 + sysupgrade-tar）
+#  - eMMC 机型：kernel FIT + 独立 rootfs 分区（root=PARTLABEL=rootfs）
+#  - 256M 机型：ubi 分区扩到 250.5MB，factory/sysupgrade 双产物
+# ============================================================================
+
+#===== CMCC XR30 NAND (128M, U-Boot mod) =====
+define Device/cmcc_xr30-nand
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := XR30 NAND
+  DEVICE_VARIANT := (U-Boot mod)
+  DEVICE_DTS := mt7981b-cmcc-xr30-nand
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc,xr30-nand
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 116736k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  KERNEL = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
+endef
+TARGET_DEVICES += cmcc_xr30-nand
+
+#===== CMCC XR30 eMMC =====
+define Device/cmcc_xr30-emmc
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := XR30 (eMMC version)
+  DEVICE_DTS := mt7981b-cmcc-xr30-emmc
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc,xr30-emmc
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 	e2fsprogs f2fsck mkf2fs
+  KERNEL := kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += cmcc_xr30-emmc
+
+#===== CMCC RAX3000M NAND (256M Flash) =====
+define Device/cmcc_rax3000m-nand-256m
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := RAX3000M
+  DEVICE_VARIANT := (NAND 256M)
+  DEVICE_DTS := mt7981b-cmcc-rax3000m-nand-256m
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc,rax3000m-nand-256m
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 250880k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  KERNEL = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
+endef
+TARGET_DEVICES += cmcc_rax3000m-nand-256m
+
+#===== CMCC XR30 NAND (256M Flash) =====
+define Device/cmcc_xr30-nand-256m
+  DEVICE_VENDOR := CMCC
+  DEVICE_MODEL := XR30
+  DEVICE_VARIANT := (NAND 256M)
+  DEVICE_DTS := mt7981b-cmcc-xr30-nand-256m
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += cmcc,xr30-nand-256m
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 250880k
+  KERNEL_IN_UBI := 1
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  KERNEL = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS = kernel-bin | lzma | 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
+endef
+TARGET_DEVICES += cmcc_xr30-nand-256m
+
 define Device/comfast_cf-e393ax
   DEVICE_VENDOR := COMFAST
   DEVICE_MODEL := CF-E393AX

@@ -11,6 +11,9 @@ mediatek_setup_interfaces()
 	abt,asr3000|\
 	buffalo,wsr-6000ax8|\
 	abt,asr3000-ubootlayout|\
+	cmcc,xr30-emmc|\
+	cmcc,xr30-nand|\
+	cmcc,xr30-nand-256m|\
 	cmcc,mr3000d-ciq-256m|\
 	imou,lc-hx3001-ubootlayout|\
 	h3c,magic-nx30-pro-nmbm|\
@@ -65,6 +68,7 @@ mediatek_setup_interfaces()
 	cmcc,a10-ubootmod|\
 	cmcc,a10-ubootlayout|\
 	cmcc,rax3000m|\
+	cmcc,rax3000m-nand-256m|\
 	cmcc,rax3000m-emmc-ubootlayout|\
 	cmcc,rax3000m-nand-ubootlayout|\
 	confiabits,mt7981|\
