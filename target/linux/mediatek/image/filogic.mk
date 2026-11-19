@@ -5857,3 +5857,69 @@ define Device/ruijie_rg-be72-pro-mod
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += ruijie_rg-be72-pro-mod
+
+define Device/ruijie_rg-x30e-pro-ubi
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X30E Pro (UBI)
+  DEVICE_DTS := mt7981b-ruijie-rg-x30e-pro-ubi
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie,rg-x30e-pro-ubi
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  KERNEL_IN_UBI := 1
+  UBOOTENV_IN_UBI := 1
+  KERNEL := kernel-bin | gzip
+  IMAGES := sysupgrade.itb
+  IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | pad-rootfs | append-metadata
+endef
+TARGET_DEVICES += ruijie_rg-x30e-pro-ubi
+
+define Device/ruijie_rg-x30e
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X30E
+  DEVICE_DTS := mt7981b-ruijie-rg-x30e
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie,rg-x30e
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE_SIZE := 114688k
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += ruijie_rg-x30e
+
+define Device/ruijie_rg-x30e-stock
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X30E (stock)
+  DEVICE_DTS := mt7981b-ruijie-rg-x30e-stock
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie,rg-x30e-stock
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE_SIZE := 34816k
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += ruijie_rg-x30e-stock
+
+define Device/ruijie_rg-x30e-firmware2
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-X30E (firmware2)
+  DEVICE_DTS := mt7981b-ruijie-rg-x30e-firmware2
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie,rg-x30e-firmware2
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE_SIZE := 34816k
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += ruijie_rg-x30e-firmware2
