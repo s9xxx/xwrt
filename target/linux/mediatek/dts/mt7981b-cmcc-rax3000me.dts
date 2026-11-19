@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
 /dts-v1/;
-#include "mt7981b-cmcc-rax3000m-lede.dts"
+#include "mt7981b-cmcc-rax3000m.dts"
 
 / {
 	model = "CMCC RAX3000Me";
