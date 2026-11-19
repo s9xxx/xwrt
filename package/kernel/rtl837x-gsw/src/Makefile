@@ -1,3 +1,4 @@
+ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-but-set-variable
 ccflags-y += -DMDC_MDIO_OPERATION
 
 ifeq ($(CONFIG_RTL837x_GSW_PORT_MIB_FEATURE),y)
