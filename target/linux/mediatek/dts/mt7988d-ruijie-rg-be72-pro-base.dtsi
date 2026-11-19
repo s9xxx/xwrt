@@ -16,7 +16,7 @@
 		led-failsafe = &led_status_red;
 		led-running = &led_status_blue_atm;
 		led-upgrade = &led_status_green_atm;
-		serial0 = &uart0;
+		serial0 = &serial0;
 	};
 
 	chosen {
@@ -381,7 +381,7 @@
 	};
 };
 
-&uart0 {
+&serial0 {
 	status = "okay";
 };
 

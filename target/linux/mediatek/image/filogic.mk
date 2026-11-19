@@ -5442,7 +5442,7 @@ define Device/cudy_tr3000-v1-256mb
   IMAGE_SIZE := 235520k
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
 endef
 TARGET_DEVICES += cudy_tr3000-v1-256mb
 
@@ -5471,7 +5471,7 @@ define Device/huasifei_wh3000-emmc
   SUPPORTED_DEVICES += huasifei_wh3000-emmc
   DEVICE_PACKAGES :=  \
 	kmod-usb-net-cdc-mbim kmod-usb-net-qmi-wwan kmod-usb-serial-option \
-	kmod-usb3 automount f2fsck mkf2fs uqmi
+	kmod-usb3 f2fsck mkf2fs uqmi
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
   KERNEL_INITRAMFS := kernel-bin | lzma | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
@@ -5557,7 +5557,7 @@ define Device/sl_3000-emmc
   DEVICE_DTS := mt7981b-sl-3000-emmc
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += sl_3000-emmc
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
   KERNEL_INITRAMFS := kernel-bin | lzma | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
@@ -5597,7 +5597,7 @@ define Device/umi_uax3000e
   DEVICE_DTS := mt7981b-umi-uax3000e
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += umi_uax3000e
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware automount coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc mmc-utils
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware coremark blkid blockdev fdisk f2fsck mkf2fs kmod-mmc mmc-utils
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
   KERNEL_INITRAMFS := kernel-bin | lzma | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
@@ -5686,7 +5686,7 @@ define Device/clx_s20l
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += clx_s20l
   DEVICE_DTS_LOADADDR := 0x47000000
-  DEVICE_PACKAGES := automount e2fsprogs f2fsck mkf2fs kmod-usb3 \
+  DEVICE_PACKAGES := e2fsprogs f2fsck mkf2fs kmod-usb3 \
 	kmod-mt7986-firmware mt7986-wo-firmware
   IMAGES := sysupgrade.bin
   KERNEL := kernel-bin | lzma | \
@@ -5801,7 +5801,7 @@ define Device/yvr_x6
   DEVICE_DTS := mt7986a-yvr-x6
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += yvr_x6
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
   BLOCKSIZE := 256k
   PAGESIZE := 4096
@@ -5840,7 +5840,7 @@ define Device/ruijie_rg-be72-pro
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-be72-pro
   KERNEL_IN_UBI := 1
-  DEVICE_PACKAGES := mt798x-2p5g-phy-firmware-internal kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 automount swconfig kmod-rtl837x_gsw
+  DEVICE_PACKAGES := mt798x-2p5g-phy-firmware-internal kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += ruijie_rg-be72-pro
@@ -5853,7 +5853,7 @@ define Device/ruijie_rg-be72-pro-mod
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-be72-pro-mod
   KERNEL_IN_UBI := 1
-  DEVICE_PACKAGES := mt798x-2p5g-phy-firmware-internal kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 automount swconfig kmod-rtl837x_gsw
+  DEVICE_PACKAGES := mt798x-2p5g-phy-firmware-internal kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += ruijie_rg-be72-pro-mod
@@ -5864,7 +5864,7 @@ define Device/ruijie_rg-x30e-pro-ubi
   DEVICE_DTS := mt7981b-ruijie-rg-x30e-pro-ubi
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-x30e-pro-ubi
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw
   KERNEL_IN_UBI := 1
   UBOOTENV_IN_UBI := 1
   KERNEL := kernel-bin | gzip
@@ -5879,7 +5879,7 @@ define Device/ruijie_rg-x30e
   DEVICE_DTS := mt7981b-ruijie-rg-x30e
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-x30e
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_IN_UBI := 1
@@ -5896,7 +5896,7 @@ define Device/ruijie_rg-x30e-stock
   DEVICE_DTS := mt7981b-ruijie-rg-x30e-stock
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-x30e-stock
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_IN_UBI := 1
@@ -5913,7 +5913,7 @@ define Device/ruijie_rg-x30e-firmware2
   DEVICE_DTS := mt7981b-ruijie-rg-x30e-firmware2
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-x30e-firmware2
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-mtd-rw
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_IN_UBI := 1

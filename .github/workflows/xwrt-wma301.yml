@@ -276,7 +276,6 @@ jobs:
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           EOF
           if [ -n "$PACKAGES" ]; then
             for p in $PACKAGES; do echo "CONFIG_PACKAGE_$p=y" >> .config; done

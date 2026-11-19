@@ -230,7 +230,6 @@ jobs:
           CONFIG_PACKAGE_kmod-usb-net-rndis=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           CONFIG_PACKAGE_f2fs-tools=y
           CONFIG_PACKAGE_mkf2fs=y
           CONFIG_PACKAGE_f2fsck=y

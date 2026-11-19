@@ -286,7 +286,6 @@ jobs:
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           EOF
           # MT7981 机型补 mt7981 固件、MT7986 机型补 mt7986 固件
           case "$DEVICE" in

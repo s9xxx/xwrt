@@ -196,7 +196,6 @@ jobs:
           CONFIG_LUCI_LANG_zh_Hans=y
           CONFIG_LUCI_LANG_en=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
-          CONFIG_PACKAGE_automount=y
           EOF
           make -j1 defconfig > defconfig.log 2>&1 || { tail -40 defconfig.log; echo "::error::make defconfig 失败"; exit 1; }
           fail=0

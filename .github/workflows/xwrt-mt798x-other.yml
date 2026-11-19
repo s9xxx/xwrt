@@ -296,7 +296,6 @@ jobs:
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           EOF
           case "$DEVICE" in
             *7986*|*s20?*|yvr_x6|*ew-6000gx*|ruijie_rg-x60-new*|clx_s20l|jdcloud_re-cs-05)

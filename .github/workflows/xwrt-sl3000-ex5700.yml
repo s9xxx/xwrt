@@ -262,7 +262,6 @@ jobs:
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           EOF
           case "$DEVICE" in
             sl_3000)

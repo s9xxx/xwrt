@@ -211,7 +211,6 @@ jobs:
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
           CONFIG_PACKAGE_block-mount=y
-          CONFIG_PACKAGE_automount=y
           EOF
           echo "CONFIG_PACKAGE_kmod-mt7992-firmware=y" >> .config
           echo "CONFIG_PACKAGE_kmod-mt7992-23-firmware=y" >> .config

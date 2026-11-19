@@ -207,7 +207,6 @@ jobs:
           CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
           CONFIG_PACKAGE_kmod-usb-net-rndis=y
           CONFIG_PACKAGE_kmod-mtd-rw=y
-          CONFIG_PACKAGE_automount=y
           CONFIG_PACKAGE_block-mount=y
           EOF
           if [ -n "$PACKAGES" ]; then
