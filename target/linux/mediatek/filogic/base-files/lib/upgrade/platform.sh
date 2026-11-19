@@ -288,6 +288,7 @@ platform_do_upgrade() {
 	huasifei,ws3009|\
 	livinet,zr-3020|\
 	mediatek,7981r128|\
+	sl,3000|\
 	sl,3000-emmc|\
 	superelectron,zn-m5-stock|\
 	umi,uax3000e|\
@@ -608,6 +609,7 @@ platform_check_image() {
 	huasifei,ws3009|\
 	livinet,zr-3020|\
 	mediatek,7981r128|\
+	sl,3000|\
 	sl,3000-emmc|\
 	superelectron,zn-m5-stock|\
 	umi,uax3000e|\

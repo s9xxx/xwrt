@@ -21,6 +21,7 @@ mediatek_setup_interfaces()
 	huasifei,ws3009|\
 	livinet,zr-3020|\
 	mediatek,7981r128|\
+	sl,3000|\
 	sl,3000-emmc|\
 	superelectron,zn-m5-stock|\
 	umi,uax3000e|\
@@ -293,6 +294,11 @@ abt,asr3000|\
 	smartrg,sdg-8622|\
 	smartrg,sdg-8632|\
 	smartrg,sdg-8733a|\
+	sl,3000)
+		lan_mac=$(mtd_get_mac_binary Factory 0x04)
+		wan_mac=$(macaddr_add "$lan_mac" -2)
+		label_mac=$lan_mac
+		;;
 	yuncore,ax835)
 		ucidef_set_interfaces_lan_wan lan wan
 		;;
