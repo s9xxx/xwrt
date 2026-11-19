@@ -668,7 +668,7 @@ jobs:
     name: 📦 发布 Release
     needs: [prepare, build]
     if: |
-      always() && needs.build.result == 'success' &&
+      always() && !cancelled() &&
       (github.event_name == 'schedule' || inputs.make_release)
     runs-on: ubuntu-24.04
     steps:
@@ -707,6 +707,7 @@ jobs:
 
           每个机型均有独立的 squashfs-sysupgrade 产物。刷机前务必核对机型名与分区布局（-stock / -ubootmod 等变体不可混刷）。
           EOF
+          [ -n "$(ls -A rel 2>/dev/null)" ] || { echo "::warning::没有任何产物可发布，跳过发布"; exit 0; }
           gh release create "$TAG" rel/* \
             --title "X-Wrt tegra 平台 · $TAG" \
             --notes-file notes.md \

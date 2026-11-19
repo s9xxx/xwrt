@@ -239,7 +239,7 @@ define Device/asus_rt-n13u
   IMAGE_SIZE := 7872k
   DEVICE_VENDOR := ASUS
   DEVICE_MODEL := RT-N13U
-  DEVICE_PACKAGES := kmod-leds-gpio kmod-rt2800-pci kmod-usb-dwc2
+  DEVICE_PACKAGES := kmod-leds-gpio kmod-usb-dwc2
   SUPPORTED_DEVICES += rt-n13u
   DEFAULT := n
 endef

@@ -110,6 +110,7 @@ jobs:
           - 发布作业: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           - 校验: 附件内 MANUAL-sha256sums.txt 为本次发布文件的校验和
           EOF
+          [ -n "$(ls -A rel 2>/dev/null)" ] || { echo "::warning::没有任何产物可发布，跳过发布"; exit 0; }
           gh release create "$TAG" rel/* \
             --title "$TITLE" \
             --notes-file notes.md \
