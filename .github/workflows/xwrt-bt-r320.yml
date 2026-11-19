@@ -348,7 +348,7 @@ jobs:
     name: 📦 发布 Release
     needs: build
     if: |
-      github.event_name == 'schedule' || inputs.make_release
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载产物
@@ -378,7 +378,9 @@ jobs:
           - 主题: luci-theme-vantage（默认；已移除 argon / bootstrap）
           - 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EOF
-          gh release create "$TAG" ./* \
+          FILES=$(ls | grep -vx 'notes.md')
+          [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          gh release create "$TAG" $FILES \
             --title "X-Wrt BT-R320 · $TAG" \
             --notes-file notes.md \
             --latest

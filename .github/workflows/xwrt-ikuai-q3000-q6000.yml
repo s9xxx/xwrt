@@ -415,7 +415,7 @@ jobs:
     name: 📦 发布 Release
     needs: build
     if: |
-      github.event_name == 'schedule' || inputs.make_release
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载全部机型产物
@@ -448,7 +448,9 @@ jobs:
           NAND 机型为 KERNEL_IN_UBI + sysupgrade-tar（factory 用于首次刷入）；
           eMMC 机型为 root=PARTLABEL=rootfs，仅出 sysupgrade。
           EOF
-          gh release create "$TAG" ./* \
+          FILES=$(ls | grep -vx 'notes.md')
+          [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          gh release create "$TAG" $FILES \
             --title "X-Wrt iKuai Q3000 / Q6000 · $TAG" \
             --notes-file notes.md \
             --latest

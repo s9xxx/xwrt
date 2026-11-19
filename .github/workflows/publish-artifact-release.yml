@@ -56,15 +56,34 @@ jobs:
         run: |
           set -e
           mkdir -p rel
-          # 展平所有产物目录，只保留固件与校验类文件
-          find dl -type f \( -name '*.bin' -o -name '*.itb' -o -name '*.manifest' \
-               -o -name 'sha256sums' -o -name 'sha256sums.txt' -o -name 'profiles.json' \) \
-            -exec cp -n {} rel/ \;
-          ls -lh rel || true
-          count=$(find rel -maxdepth 1 -type f | wc -l)
-          [ "$count" -gt 0 ] || { echo "::error::运行 $RUN_ID 没有可发布的固件产物（检查该 run 的 Artifacts）"; exit 1; }
-          (cd rel && sha256sum * > MANUAL-sha256sums.txt && cat MANUAL-sha256sums.txt)
-          echo "可发布文件数: $count"
+          python3 - <<'PY2'
+          import os, shutil
+          src, dst = 'dl', 'rel'
+          used = {}
+          count = 0
+          for root, _, files in os.walk(src):
+            for f in sorted(files):
+              if f.startswith('device-plan'):
+                continue
+              srcp = os.path.join(root, f)
+              if not os.path.isfile(srcp):
+                continue
+              # 展平到 rel/，重名时用产物目录名做前缀，避免多机型/多产物互相覆盖
+              name = f
+              if name in used:
+                prefix = os.path.basename(root).replace(os.sep, '-')
+                name = f'{prefix}-{f}'
+              while name in used:
+                name = 'dup-' + name
+              used[name] = srcp
+              shutil.copy2(srcp, os.path.join(dst, name))
+              count += 1
+          print(f'可发布文件数: {count}')
+          if count == 0:
+            raise SystemExit(f'::error::运行没有可发布的产物文件（检查该 run 的 Artifacts 是否已过期）')
+          PY2
+          ls -lh rel
+          (cd rel && sha256sum * > MANUAL-sha256sums.txt && head -40 MANUAL-sha256sums.txt)
 
       - name: 创建 Release
         env:

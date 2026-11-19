@@ -341,7 +341,7 @@ jobs:
     name: 📦 发布 Release
     needs: build
     if: |
-      github.event_name == 'schedule' || inputs.make_release
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载产物
@@ -372,7 +372,9 @@ jobs:
 
           刷机前请确认设备为 512MB NAND 扩容版，切勿与 128MB / 256MB 机型混刷。
           EOF
-          gh release create "$TAG" ./* \
+          FILES=$(ls | grep -vx 'notes.md')
+          [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          gh release create "$TAG" $FILES \
             --title "X-Wrt TR3000 512MB · $TAG" \
             --notes-file notes.md \
             --latest

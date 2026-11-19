@@ -392,7 +392,7 @@ jobs:
     name: 📦 发布 Release
     needs: build
     if: |
-      github.event_name == 'schedule' || inputs.make_release
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载全部机型产物
@@ -425,7 +425,9 @@ jobs:
           128M 机型为 U-Boot mod 布局（factory + sysupgrade）；256M 机型 ubi 分区为 250.5MB，
           请确认硬件已硬改 256M 闪存后再刷，切勿与 128M 机型混刷。
           EOF
-          gh release create "$TAG" ./* \
+          FILES=$(ls | grep -vx 'notes.md')
+          [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          gh release create "$TAG" $FILES \
             --title "X-Wrt XR30 / RAX3000M · $TAG" \
             --notes-file notes.md \
             --latest

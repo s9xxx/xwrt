@@ -386,7 +386,7 @@ jobs:
     name: 📦 发布 Release
     needs: build
     if: |
-      github.event_name == 'schedule' || inputs.make_release
+      always() && !cancelled()
     runs-on: ubuntu-24.04
     steps:
       - name: 下载全部机型产物
@@ -420,7 +420,9 @@ jobs:
           刷机前请确认设备型号与布局（stock/2.1 与原厂分区表对应）。
           漏发 Release 时，可用 publish-artifact-release.yml 按 run_id 补发。
           EOF
-          gh release create "$TAG" ./* \
+          FILES=$(ls | grep -vx 'notes.md')
+          [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          gh release create "$TAG" $FILES \
             --title "X-Wrt TP-Link WMA301 · $TAG" \
             --notes-file ${{ github.workspace }}/rel/notes.md \
             --latest
