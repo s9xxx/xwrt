@@ -1,4 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * Globitel BT-R320 (MT7981B + MT7531AE + eMMC)
+ *
+ * 基线上游 openwrt-25.12 的 mt7981b-globitel-bt-r320.dts（内核 6.12，SoC dtsi 名为
+ * mt7981b.dtsi，eMMC 分区用 gpt-partitions / partname 写法），只改三处：
+ *   1) chosen：去掉上游的 bootargs-override="root=/dev/fit0" 与 rootdisk，
+ *      改成 root=PARTLABEL=rootfs —— 原厂/老 U-Boot 不会把 root 指到 FIT，
+ *      必须让内核自己按 eMMC 分区名找根分区（配合 sysupgrade-tar + emmc_do_upgrade）。
+ *   2) memory：声明 512MB（参考可工作的 ImmortalWrt 6.6 移植版本，宁少认不多认）。
+ *   3) 补 3 个状态灯（pio10/11/12）与 led-boot/running/failsafe/upgrade 别名。
+ *
+ * 其余（MDIO 上 mt7531 复位脚 pio39、lan1/2/3 + wan、factory 分区里的
+ * eeprom@0 与 MAC 0x24/0x2a）沿用上游，不做改动。
+ *
+ * 注意：#include 必须写 mt7981b.dtsi —— 25.12 的内核 6.12 只有 mt7981b.dtsi，
+ * 没有 mt7981.dtsi（lede 的 files-6.18 才有 mt7981.dtsi），写错会 dtb 编译直接失败。
+ */
+
 
 /dts-v1/;
 #include <dt-bindings/gpio/gpio.h>
@@ -14,17 +32,20 @@
 	aliases {
 		serial0 = &uart0;
 		label-mac-device = &gmac0;
+		led-boot = &led_status_red;
+		led-failsafe = &led_status_red;
+		led-running = &led_status_green;
+		led-upgrade = &led_status_blue;
 	};
 
 	chosen {
-		bootargs-override = "root=/dev/fit0 rootwait";
+		bootargs = "root=PARTLABEL=rootfs rootwait rootfstype=squashfs";
 		stdout-path = "serial0:115200n8";
-		rootdisk = <&emmc_rootdisk>;
 	};
 
 	memory@40000000 {
 		device_type = "memory";
-		reg = <0 0x40000000 0 0x40000000>;
+		reg = <0 0x40000000 0 0x20000000>;
 	};
 
 	usb_vbus: regulator-usb-vbus {
@@ -56,14 +77,29 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		led-0 {
+		led_status_red: led-0 {
+			label = "red:status";
+			gpios = <&pio 10 GPIO_ACTIVE_LOW>;
+		};
+
+		led_status_green: led-1 {
+			label = "green:status";
+			gpios = <&pio 11 GPIO_ACTIVE_LOW>;
+		};
+
+		led_status_blue: led-2 {
+			label = "blue:status";
+			gpios = <&pio 12 GPIO_ACTIVE_LOW>;
+		};
+
+		led-3 {
 			function = LED_FUNCTION_WLAN_2GHZ;
 			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&pio 34 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
 		};
 
-		led-1 {
+		led-4 {
 			function = LED_FUNCTION_WLAN_5GHZ;
 			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&pio 35 GPIO_ACTIVE_LOW>;
@@ -95,7 +131,7 @@
 		switch@0 {
 			compatible = "mediatek,mt7531";
 			reg = <31>;
-			reset-gpios = <&pio 39 GPIO_ACTIVE_LOW>;
+			reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			interrupt-parent = <&pio>;

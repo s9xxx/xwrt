@@ -319,7 +319,6 @@ platform_do_upgrade() {
 	cudy,wr3000p-v1-ubootmod|\
 	gatonetworks,gdsp|\
 	glinet,gl-be10000-ubootmod|\
-	globitel,bt-r320|\
 	h3c,magic-nx30-pro|\
 	imou,hx21|\
 	jcg,q30-pro|\
@@ -374,6 +373,7 @@ platform_do_upgrade() {
 	glinet,gl-xe3000|\
 	cmcc,xr30-emmc|\
 	ikuai,q6000-emmc|\
+	globitel,bt-r320|\
 	hiveton,h5000m|\
 	huasifei,wh3000|\
 	huasifei,wh3000-pro-emmc|\
@@ -594,7 +594,6 @@ platform_check_image() {
 	cudy,wr3000p-v1-ubootmod|\
 	gatonetworks,gdsp|\
 	glinet,gl-be10000-ubootmod|\
-	globitel,bt-r320|\
 	h3c,magic-nx30-pro|\
 	jcg,q30-pro|\
 	jdcloud,re-cp-03|\
@@ -648,6 +647,7 @@ platform_check_image() {
 	creatlentem,clt-r30b1-112m|\
 	cmcc,xr30-emmc|\
 	ikuai,q6000-emmc|\
+	globitel,bt-r320|\
 	hiveton,h5000m|\
 	nradio,c8-668gl)
 		# tar magic `ustar`
