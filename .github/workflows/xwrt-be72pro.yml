@@ -1,0 +1,307 @@
+name: 🧱 X-Wrt 锐捷 RG-BE72 Pro 固件编译
+
+# 每周六 11:00（北京时间 UTC+8）= 周六 03:00 UTC
+# 机型来源：y9858/be72pro → RuijieNetworksCommunity/MT798X-6.6-24.10
+#           （分支 mt798x-mt799x-mtwifi_be72pro_be68u，MT7988D）
+#   覆盖：ruijie_rg-be72-pro（原厂布局）、ruijie_rg-be72-pro-mod（U-Boot mod）
+#
+# 主题：luci-theme-vantage 为默认，argon 及其配置 app 在构建时移除
+on:
+  schedule:
+    - cron: '0 3 * * 6'
+  workflow_dispatch:
+    inputs:
+      devices:
+        description: '机型（逗号分隔，留空=两个都编）'
+        required: false
+        default: 'ruijie_rg-be72-pro,ruijie_rg-be72-pro-mod'
+      packages:
+        description: '额外固件包（空格分隔，可留空）'
+        required: false
+        default: ''
+      make_release:
+        description: '是否发布到 Release'
+        required: false
+        default: true
+        type: boolean
+      use_ccache:
+        description: '是否使用 ccache 加速'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: xwrt-be72pro-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  TZ: Asia/Shanghai
+  TARGET: mediatek
+  SUBTARGET: filogic
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 4G
+
+jobs:
+  prepare:
+    name: 🧭 解析机型
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+      - name: 生成机型矩阵
+        id: plan
+        env:
+          DEVICE_INPUT: ${{ inputs.devices || '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          meta = {
+              'ruijie_rg-be72-pro': ('Ruijie RG-BE72 Pro', 'mt7988d-ruijie-rg-be72-pro'),
+              'ruijie_rg-be72-pro-mod': ('Ruijie RG-BE72 Pro (U-Boot mod)', 'mt7988d-ruijie-rg-be72-pro-mod'),
+          }
+          raw = (os.environ.get('DEVICE_INPUT') or '').replace('，', ',')
+          devs = [d.strip() for d in raw.split(',') if d.strip()] or list(meta)
+          bad = [d for d in devs if d not in meta]
+          if bad:
+              raise SystemExit('未知机型: %s' % ' '.join(bad))
+          text = open('target/linux/mediatek/image/filogic.mk', encoding='utf-8').read()
+          inc = []
+          for d in devs:
+              if not re.search(r'^define Device/%s$' % re.escape(d), text, re.M):
+                  raise SystemExit('filogic.mk 缺少机型块: %s' % d)
+              inc.append({'device': d, 'name': meta[d][0], 'dts': meta[d][1]})
+          open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write('matrix=%s\n' % json.dumps({'include': inc}))
+          print('机型矩阵:', json.dumps(inc, ensure_ascii=False))
+          PY
+
+  build:
+    name: 🏗️ ${{ matrix.name }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      DEVICE: ${{ matrix.device }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+      - name: 记录源码版本
+        id: srcver
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: 释放磁盘空间
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache \
+                      /usr/local/share/boost /usr/local/lib/node_modules /usr/lib/jvm \
+                      /usr/share/swift /usr/share/miniconda /usr/share/rust /usr/share/kotlinc \
+                      /opt/az /usr/local/.ghcup /var/lib/snapd /usr/local/share/chromium \
+                      /opt/microsoft /usr/share/sbt 2>/dev/null || true
+          sudo systemctl stop docker docker.socket 2>/dev/null || true
+          sudo rm -rf /var/lib/docker /var/lib/containerd 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/* /home/runner/.cache /home/runner/.npm 2>/dev/null || true
+          df -h / | tail -1
+      - name: 安装编译依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential clang flex bison g++ gawk gcc-multilib \
+            g++-multilib gettext git libncurses-dev libssl-dev libelf-dev python3-dev \
+            python3-setuptools rsync unzip zlib1g-dev file wget ccache zstd swig time \
+            xsltproc subversion bc patch bzip2 libtool-bin pkg-config autoconf automake
+          sudo apt-get install -y -qq perl libthread-queue-any-perl 2>/dev/null || true
+      - name: 恢复 ccache
+        if: ${{ inputs.use_ccache != false }}
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-xwrt-be72pro-${{ matrix.device }}-${{ steps.srcver.outputs.sha }}
+          restore-keys: |
+            ccache-xwrt-be72pro-${{ matrix.device }}-
+            ccache-xwrt-mediatek-
+      - name: ccache 预热配置
+        if: ${{ inputs.use_ccache != false }}
+        run: ccache -M "$CCACHE_MAXSIZE" && ccache -z
+      - name: 机型适配自检
+        env:
+          DTS: ${{ matrix.dts }}
+        run: |
+          set -e
+          test -f "target/linux/mediatek/dts/$DTS.dts" || { echo "::error::缺少设备树 $DTS.dts"; exit 1; }
+          grep -q "^define Device/$DEVICE$" target/linux/mediatek/image/filogic.mk || { echo "::error::缺机型块"; exit 1; }
+          grep -q "TARGET_DEVICES += $DEVICE" target/linux/mediatek/image/filogic.mk || { echo "::error::缺 TARGET_DEVICES"; exit 1; }
+          grep -q "ruijie,rg-be72-pro" target/linux/mediatek/filogic/base-files/etc/board.d/02_network || { echo "::error::02_network 未登记"; exit 1; }
+          echo "✔ 机型适配自检通过"
+      - name: 更新 feeds（带重试）
+        run: |
+          set -o pipefail
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds update -a 2>&1 | tee feeds-update.log | tail -15; then ok=1; break; fi
+            echo "::warning::feeds update 第 $i 次失败，重试"; sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds update 失败"; exit 1; }
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds install -a 2>&1 | tee feeds-install.log | tail -5; then ok=1; break; fi
+            echo "::warning::feeds install 第 $i 次失败，重试"; sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds install 失败"; exit 1; }
+      - name: 注入 vantage 主题并移除 argon / bootstrap
+        run: |
+          set -e
+          rm -rf /tmp/kiddin9
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/kiddin9/op-packages.git /tmp/kiddin9
+          (cd /tmp/kiddin9 && git sparse-checkout set luci-theme-vantage luci-app-vantage)
+          cp -a /tmp/kiddin9/luci-theme-vantage /tmp/kiddin9/luci-app-vantage package/
+          test -f package/luci-theme-vantage/Makefile || { echo "::error::vantage 缺失"; exit 1; }
+          rm -rf feeds/luci/themes/luci-theme-argon feeds/luci/applications/luci-app-argon-config feeds/luci/themes/luci-theme-bootstrap 2>/dev/null || true
+          find feeds/luci -type f \( -name 'Makefile' -o -name '*.mk' \) -print0 2>/dev/null | xargs -0 -r sed -i \
+            -e 's/luci-theme-bootstrap/luci-theme-vantage/g' -e 's/luci-theme-argon/luci-theme-vantage/g' -e 's/luci-app-argon-config/luci-app-vantage/g'
+          find feeds/luci -type d \( -name 'luci-theme-bootstrap' -o -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) -prune -exec rm -rf {} + 2>/dev/null || true
+          mkdir -p files/etc/uci-defaults
+          cat > files/etc/uci-defaults/99-default-theme-vantage <<'EOF'
+          #!/bin/sh
+          uci -q get luci.main >/dev/null 2>&1 || uci set luci.main=core
+          uci set luci.main.mediaurlbase='/luci-static/vantage'
+          uci commit luci
+          exit 0
+          EOF
+          chmod +x files/etc/uci-defaults/99-default-theme-vantage
+          echo "✔ vantage 默认主题就绪"
+      - name: 生成 .config
+        env:
+          PACKAGES: ${{ inputs.packages || '' }}
+        run: |
+          set -e
+          cat > .config <<EOF
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_filogic=y
+          CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          CONFIG_TARGET_ROOTFS_PARTSIZE=1024
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-compat=y
+          CONFIG_PACKAGE_luci-theme-vantage=y
+          CONFIG_PACKAGE_luci-app-vantage=y
+          # CONFIG_PACKAGE_luci-theme-argon is not set
+          # CONFIG_PACKAGE_luci-app-argon-config is not set
+          # CONFIG_PACKAGE_luci-theme-bootstrap is not set
+          # CONFIG_PACKAGE_wpad-basic-wolfssl is not set
+          # CONFIG_PACKAGE_wpad-basic-mbedtls is not set
+          CONFIG_PACKAGE_wpad-wolfssl=y
+          CONFIG_PACKAGE_kmod-mt7915e=y
+          CONFIG_PACKAGE_wireless-regdb=y
+          CONFIG_PACKAGE_iwinfo=y
+          CONFIG_PACKAGE_luci-mod-network=y
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_LUCI_LANG_en=y
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_kmod-mtd-rw=y
+          CONFIG_PACKAGE_block-mount=y
+          CONFIG_PACKAGE_automount=y
+          EOF
+          echo "CONFIG_PACKAGE_kmod-mt7992-firmware=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-mt7992-23-firmware=y" >> .config
+          echo "CONFIG_PACKAGE_mt7988-wo-firmware=y" >> .config
+          if [ -n "$PACKAGES" ]; then for p in $PACKAGES; do echo "CONFIG_PACKAGE_$p=y" >> .config; done; fi
+          make -j1 defconfig > defconfig.log 2>&1 || { tail -40 defconfig.log; echo "::error::make defconfig 失败"; exit 1; }
+          fail=0
+          grep -q "CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y" .config || { echo "::error::机型符号未启用"; fail=1; }
+          grep -q "CONFIG_TARGET_PROFILE=\"DEVICE_$DEVICE\"" .config || { echo "::error::TARGET_PROFILE 未指向"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-vantage=y' .config || { echo "::error::vantage 未选中"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-argon=y' .config && { echo "::error::argon 仍存在"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-bootstrap=y' .config && { echo "::error::bootstrap 仍选中"; fail=1; }
+          [ "$fail" = "0" ] || exit 1
+          echo "✔ .config 校验通过"
+      - name: 预下载软件包
+        run: make download -j8 || echo "::warning::make download 有失败项"
+      - name: 编译
+        run: |
+          set -o pipefail
+          rc=0
+          make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j"$(( $(nproc) + 1 ))" 2>&1 | tee build.log || rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::并行编译失败，-j1 V=s 复现"
+            make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j1 V=s 2>&1 | tee error.log || true
+            tail -n 150 error.log
+            exit 1
+          fi
+      - name: 失败诊断
+        if: failure()
+        run: |
+          for f in defconfig.log feeds-update.log feeds-install.log build.log error.log; do
+            [ -f "$f" ] && { echo "===== $f ====="; tail -40 "$f" || true; }
+          done
+      - name: 上传编译日志（失败时）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.device }}
+          path: |
+            *.log
+            .config
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
+      - name: 校验并收集产物
+        run: |
+          set -e
+          mkdir -p out
+          DIR="bin/targets/$TARGET/$SUBTARGET"
+          find "$DIR" -maxdepth 1 -type f \( -name "*$DEVICE*" -o -name 'sha256sums' -o -name 'profiles.json' \) -exec cp {} out/ \; 2>/dev/null || true
+          ls -lh out || true
+          ls out/*"$DEVICE"*sysupgrade* >/dev/null 2>&1 || { echo "::error::$DEVICE 无 sysupgrade 产物"; exit 1; }
+          (cd out && sha256sum * > sha256sums.local.txt)
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: images-${{ matrix.device }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: 📦 发布 Release
+    needs: build
+    if: |
+      github.event_name == 'schedule' || inputs.make_release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: images-*
+          merge-multiple: true
+          path: rel
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd rel
+          TAG="xwrt-be72pro-$(TZ=Asia/Shanghai date +%Y%m%d)"
+          if gh release view "$TAG" > /dev/null 2>&1; then TAG="$TAG-r${GITHUB_RUN_NUMBER}"; fi
+          cat > notes.md <<EOF
+          X-Wrt 自动编译 · 锐捷 RG-BE72 Pro（MT7988D）
+
+          - 触发方式: ${{ github.event_name }}
+          - 覆盖机型: ruijie_rg-be72-pro / ruijie_rg-be72-pro-mod
+          - 主题: luci-theme-vantage（默认；已移除 argon / bootstrap）
+          - 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          机型来源 y9858/be72pro → RuijieNetworksCommunity/MT798X-6.6-24.10（同分支）。
+          漏发 Release 时可用 publish-artifact-release.yml 按 run_id 补发。
+          EOF
+          gh release create "$TAG" ./* --title "X-Wrt RG-BE72 Pro · $TAG" --notes-file ${{ github.workspace }}/rel/notes.md --latest
