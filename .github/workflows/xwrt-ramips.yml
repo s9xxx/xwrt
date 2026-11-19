@@ -437,6 +437,19 @@ jobs:
           BLKID_INITRD_DEVICES = {"xwrt_wr1800k-ax-norplusemmc"}
           if any(d in BLKID_INITRD_DEVICES for d in want):
               lines.append("CONFIG_PACKAGE_blkid=y")
+              # build_dir/.../root-ramips（即 $(TARGET_DIR)，initrd 模块拷贝的源）只由
+              # .config 决定内容；DEVICE_PACKAGES 装的是 per-device 的
+              # target-dir-<id>，两者不是同一个目录。initrd-kernel 的模块清单因此
+              # 必须在这里显式选中，否则 `cp: cannot stat '.../ext4.ko'` 必然失败。
+              lines += [
+                  "CONFIG_PACKAGE_kmod-fs-ext4=y",
+                  "CONFIG_PACKAGE_kmod-crypto-crc32c=y",
+                  "CONFIG_PACKAGE_kmod-mmc=y",
+                  "CONFIG_PACKAGE_kmod-mmc-mtk=y",
+                  "CONFIG_PACKAGE_kmod-scsi-core=y",
+                  "CONFIG_PACKAGE_kmod-usb-xhci-mtk=y",
+                  "CONFIG_PACKAGE_kmod-usb-storage=y",
+              ]
           # ---- 主题：vantage 设为默认，显式关掉 x-wrt 默认主题 bootstrap/argon ----
           lines += [
               "CONFIG_PACKAGE_luci-theme-vantage=y",

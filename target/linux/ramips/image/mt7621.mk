@@ -325,12 +325,25 @@ define Build/initrd-kernel
 	$(CP) $(TARGET_DIR)/usr/sbin/blkid $@.initrd/bin/
 
 	( \
-		KMODS=(ext4 crc32c_generic mtk_sd mmc_block xhci-mtk usb-storage sd_mod); \
-		for kmod in "$${KMODS[@]}"; do \
-			$(CP) \
-				$(TARGET_DIR)/lib/modules/$(LINUX_VERSION)/$$kmod.ko \
-				$@.initrd/lib/modules/$(LINUX_VERSION)/; \
-		done; \
+		set -e; \
+		SRC="$(TARGET_DIR)/lib/modules/$(LINUX_VERSION)"; \
+		DST="$@.initrd/lib/modules/$(LINUX_VERSION)"; \
+		pick() { \
+			for m in $$2; do \
+				[ -f "$$SRC/$$m.ko" ] || continue; \
+				$(CP) "$$SRC/$$m.ko" "$$DST/"; \
+				return 0; \
+			done; \
+			echo "ERROR: initrd 缺少 $$1 模块（候选: $$2），$$SRC 现有: $$(ls $$SRC | tr '\n' ' ')" >&2; \
+			return 1; \
+		}; \
+		pick ext4 "ext4"; \
+		pick crc32c "crc32c_generic crc32c-cryptoapi"; \
+		pick mmc-mtk "mtk-sd mtk_sd"; \
+		pick mmc-block "mmc_block"; \
+		pick xhci-mtk "xhci-mtk-hcd xhci-mtk"; \
+		pick usb-storage "usb-storage"; \
+		pick scsi-core "sd_mod"; \
 	)
 
 	$(CP) $(TARGET_DIR)/lib/ld* $@.initrd/lib/
