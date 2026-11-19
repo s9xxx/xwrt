@@ -314,6 +314,14 @@ jobs:
             file wget ccache zstd swig time xsltproc subversion bc patch bzip2 \
             libtool-bin pkg-config autoconf automake
           sudo apt-get install -y -qq perl libthread-queue-any-perl 2>/dev/null || true
+          # u-boot（UBOOT_USE_BINMAN）的 prereq 会执行
+          #   staging_dir/host/bin/python3 -c 'import elftools'
+          # 缺这个模块时 make download 与 make world 都在 prereq 直接退出：
+          #   Checking 'python3-pyelftools'... failed.
+          #   u-boot: Please install the Python3 elftools module
+          sudo apt-get install -y -qq python3-pyelftools 2>/dev/null \
+            || sudo pip3 install --break-system-packages pyelftools || true
+          python3 -c 'import elftools; print("pyelftools ok", elftools.__file__)'
 
       - name: 下载机型清单
         uses: actions/download-artifact@v4
