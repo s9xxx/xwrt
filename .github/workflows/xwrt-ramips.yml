@@ -582,26 +582,41 @@ jobs:
           if [ "$rc" -ne 0 ]; then
             echo "::warning::并行编译失败，用 -j1 V=s 重跑失败包捕获真实错误"
             FAILED=$(grep -oE "ERROR: \S+ failed to build( \(build variant: \S+\))?" build.log | awk '{print $2}' | sort -u || true)
+            # 只有「整树串行重建」成功才算构建有效：
+            #  FAILED 为空 或 只有 target/linux → 下面走整树 -j1 V=s，成功即代表全世界编出来了
+            #  FAILED 含 package/* → 只重跑失败包，其余世界没重建，成功也不能代表整树
+            FULL_RETRY=0
+            if [ -z "$FAILED" ] || [ "$FAILED" = "target/linux" ]; then FULL_RETRY=1; fi
+            rc2=0
             if [ -z "$FAILED" ]; then
               echo "未提取到失败包名，对全树 -j1 V=s 复现（到失败点即停）"
-              make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j1 V=s 2>&1 | tee error.log || true
+              make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j1 V=s 2>&1 | tee error.log || rc2=$?
             else
               for p in $FAILED; do
                 case "$p" in
                   package/*)
                     echo "===== V=s 复现 $p ====="
-                    make -j1 V=s "$p/compile" 2>&1 | tee -a error.log || true ;;
+                    make -j1 V=s "$p/compile" 2>&1 | tee -a error.log || rc2=$? ;;
                   target/linux)
                     echo "===== V=s 复现 target/linux（全树跑到失败点） ====="
-                    make -j1 V=s 2>&1 | tee -a error.log || true ;;
+                    make -j1 V=s 2>&1 | tee -a error.log || rc2=$? ;;
                   *)
                     echo "未知失败目标 $p，跳过 V=s";;
                 esac
               done
             fi
-            echo "===== error.log 尾部 150 行（真实错误） ====="
-            tail -n 150 error.log 2>/dev/null || true
-            exit 1
+            # 并行 make 在多机型同时打包镜像时会给出「零输出」的失败（不打印任何 *** Error，
+            # 只能看到 make[3] -C target/linux install 之后直接 ERROR），同一棵树 -j1 串行
+            # 重建却能完整跑到 `time: target/linux/install` + package/index 全绿。串行是权威
+            # 结果：整树串行通过说明固件确实编得出来，产物另有「校验产物」步骤逐机型核对。
+            # 串行同样失败时才判失败，并把 error.log 尾部打出来。
+            if [ "$FULL_RETRY" = "1" ] && [ "$rc2" -eq 0 ]; then
+              echo "::warning::并行编译 -j 失败（rc=$rc），但整树 -j1 V=s 串行重建全部通过 → 判定为并行打包镜像阶段竞态，构建有效，继续"
+            else
+              echo "===== error.log 尾部 150 行（真实错误） ====="
+              tail -n 150 error.log 2>/dev/null || true
+              exit 1
+            fi
           fi
 
       - name: ccache 命中统计
