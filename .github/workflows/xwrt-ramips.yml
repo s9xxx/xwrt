@@ -429,6 +429,14 @@ jobs:
           ]
           lines += ["CONFIG_TARGET_DEVICE_%s_DEVICE_%s=y" % (conf, d) for d in want]
           lines += ["CONFIG_PACKAGE_%s=y" % p for p in pkgs]
+          # ---- 用 initrd-kernel 打包的机型：IMAGE 命令会从 $(TARGET_DIR) 拷
+          # /usr/sbin/blkid 进 initrd，而 busybox 的 blkid applet 默认关闭（BUSYBOX_DEFAULT_BLKID=n）、
+          # DEVICE_PACKAGES 只进设备 initramfs 包集、不一定进固件 rootfs，
+          # 故这类机型必须在 .config 里显式选中 util-linux 的 blkid，否则打包 sysupgrade.tar 时
+          # `cp: cannot stat '.../usr/sbin/blkid'` 必然失败。 ----
+          BLKID_INITRD_DEVICES = {"xwrt_wr1800k-ax-norplusemmc"}
+          if any(d in BLKID_INITRD_DEVICES for d in want):
+              lines.append("CONFIG_PACKAGE_blkid=y")
           # ---- 主题：vantage 设为默认，显式关掉 x-wrt 默认主题 bootstrap/argon ----
           lines += [
               "CONFIG_PACKAGE_luci-theme-vantage=y",
