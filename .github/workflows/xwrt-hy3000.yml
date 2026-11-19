@@ -210,6 +210,9 @@ jobs:
           # CONFIG_PACKAGE_luci-app-argon-config is not set
           # CONFIG_PACKAGE_luci-theme-bootstrap is not set
           # ---- WiFi：完整 wpad（含 802.11k/v/r）+ 无线驱动 + 监管数据库 ----
+          # hostapd 各变体互斥，必须显式关掉默认的 basic 变体，否则 wpad-wolfssl 只会被标成 m（不进固件）
+          # CONFIG_PACKAGE_wpad-basic-wolfssl is not set
+          # CONFIG_PACKAGE_wpad-basic-mbedtls is not set
           CONFIG_PACKAGE_wpad-wolfssl=y
           CONFIG_PACKAGE_kmod-mt7915e=y
           CONFIG_PACKAGE_kmod-mt7981-firmware=y
@@ -248,7 +251,8 @@ jobs:
           grep -q 'CONFIG_PACKAGE_luci-theme-argon=y' .config && { echo "::error::argon 主题仍然存在"; fail=1; }
           grep -q 'CONFIG_PACKAGE_luci-app-argon-config=y' .config && { echo "::error::argon 配置 app 仍然存在"; fail=1; }
           grep -q 'CONFIG_PACKAGE_luci-theme-bootstrap=y' .config && { echo "::error::bootstrap 主题仍被选中"; fail=1; }
-          grep -q 'CONFIG_PACKAGE_wpad-wolfssl=y' .config || { echo "::error::缺少 wpad，会导致没有 WiFi 功能"; fail=1; }
+          grep -qE '^CONFIG_PACKAGE_wpad(-basic|-mesh)?(-wolfssl|-mbedtls|-openssl)?=y$' .config || { echo "::error::缺少 wpad（WiFi 认证服务），固件会没有 WiFi 功能"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_wpad-wolfssl=y' .config || echo "::warning::完整 wpad-wolfssl 未选中，改用 basic 变体（802.11k/v 仍可用，802.11r 不可用）"
           grep -q 'CONFIG_PACKAGE_kmod-mt7915e=y' .config || { echo "::error::缺少 MT7915E 无线驱动"; fail=1; }
           grep -q 'CONFIG_PACKAGE_wireless-regdb=y' .config || { echo "::error::缺少 wireless-regdb"; fail=1; }
           [ "$fail" = "0" ] || exit 1
