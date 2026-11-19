@@ -186,11 +186,8 @@ jobs:
           cat > .config <<EOF
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
-          # 机型选择必须走 MULTI_PROFILE + 单机型符号；直接写 TARGET_PROFILE 会被 kconfig 丢弃
-          CONFIG_TARGET_MULTI_PROFILE=y
-          # CONFIG_TARGET_ALL_PROFILES is not set
-          CONFIG_TARGET_PER_DEVICE_ROOTFS=y
-          CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cudy_tr3000-512mb-v1=y
+          # 单机型：直接选 choice 成员（不带 DEVICE_ 前缀），TARGET_PROFILE 由 kconfig 自动推导
+          CONFIG_TARGET_mediatek_filogic_DEVICE_cudy_tr3000-512mb-v1=y
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
           CONFIG_TARGET_ROOTFS_PARTSIZE=160
           CONFIG_TARGET_UBIFS_FREE_SPACE_FIXUP=y
@@ -224,7 +221,7 @@ jobs:
 
           fail=0
           grep -q 'CONFIG_TARGET_PROFILE="DEVICE_cudy_tr3000-512mb-v1"' .config || { echo "::error::目标机型未选中 cudy_tr3000-512mb-v1"; fail=1; }
-          grep -q 'CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cudy_tr3000-512mb-v1=y' .config || { echo "::error::512MB 机型符号未启用"; fail=1; }
+          grep -q 'CONFIG_TARGET_mediatek_filogic_DEVICE_cudy_tr3000-512mb-v1=y' .config || { echo "::error::512MB 机型符号未启用"; fail=1; }
           grep -q 'CONFIG_PACKAGE_luci-theme-vantage=y' .config || { echo "::error::默认主题 vantage 未选中"; fail=1; }
           grep -q 'CONFIG_PACKAGE_luci-theme-argon=y' .config && { echo "::error::argon 主题仍然存在"; fail=1; }
           grep -q 'CONFIG_PACKAGE_luci-app-argon-config=y' .config && { echo "::error::argon 配置 app 仍然存在"; fail=1; }
@@ -285,6 +282,7 @@ jobs:
           path: |
             *.log
             .config
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: warn
 
