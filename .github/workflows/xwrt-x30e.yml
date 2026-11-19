@@ -116,7 +116,27 @@ jobs:
           test -f "target/linux/mediatek/dts/$DTS.dts" || { echo "::error::缺少设备树 $DTS.dts"; exit 1; }
           grep -q "^define Device/$DEVICE$" target/linux/mediatek/image/filogic.mk || { echo "::error::缺机型块"; exit 1; }
           grep -q "TARGET_DEVICES += $DEVICE" target/linux/mediatek/image/filogic.mk || { echo "::error::缺 TARGET_DEVICES"; exit 1; }
+          case "$DEVICE" in
+            ruijie_rg-x30e-pro-ubi)
+              test -f target/linux/mediatek/filogic/base-files/etc/board.d/02_network_x30e_pro                 || { echo "::error::缺少 X30E Pro 专用网口配置文件"; exit 1; }
+              ;;
+            *)
+              grep -q "ruijie,rg-x30e" target/linux/mediatek/filogic/base-files/etc/board.d/02_network                 || { echo "::error::02_network 未登记 ruijie,rg-x30e"; exit 1; }
+              grep -q "ruijie,rg-x30e" target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac                 || { echo "::error::11_fix_wifi_mac 未登记 ruijie,rg-x30e"; exit 1; }
+              ;;
+          esac
           echo "✔ 机型适配自检通过"
+      - name: 注入 X30E Pro 专用网口配置（引用仓库内独立文件）
+        run: |
+          set -e
+          SRC=target/linux/mediatek/filogic/base-files/etc/board.d/02_network_x30e_pro
+          test -f "$SRC" || { echo "::error::仓库缺少 02_network_x30e_pro"; exit 1; }
+          mkdir -p files/etc/board.d
+          cp "$SRC" files/etc/board.d/02_network_x30e_pro
+          chmod +x files/etc/board.d/02_network_x30e_pro
+          echo "✔ 已把 02_network_x30e_pro 注入到 files/etc/board.d/"
+          grep -n "ruijie,rg-x30e-pro-ubi" files/etc/board.d/02_network_x30e_pro
+
       - name: 更新 feeds（带重试）
         run: |
           set -o pipefail

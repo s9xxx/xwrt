@@ -326,6 +326,9 @@ case "$board" in
 		;;
 	ruijie,rg-x60|\
 	ruijie,rg-x60-pro-ubootlayout|\
+	ruijie,rg-x30e|\
+	ruijie,rg-x30e-stock|\
+	ruijie,rg-x30e-firmware2)
 	ruijie,rg-x60-pro)
 		addr=$(mtd_get_mac_ascii product_info ethaddr)
 		[ "$PHYNBR" = "0" ] && macaddr_add $addr 2 > /sys${DEVPATH}/macaddress
