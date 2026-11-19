@@ -1,0 +1,455 @@
+name: 🧱 X-Wrt iKuai Q3000 / Q6000 系列固件编译
+
+# 每周六 11:00（北京时间 UTC+8）自动编译
+# GitHub 的 cron 使用 UTC：周六 03:00 UTC = 周六 11:00 北京时间
+#
+# 一个 yml 覆盖三个机型（矩阵并行编译，各自出包）：
+#   ikuai_q3000        iKuai IK-Q3000（MT7981B + SPI-NAND，KERNEL_IN_UBI + tar）
+#   ikuai_q6000        iKuai IK-Q6000 NAND（MT7986A + SPI-NAND，KERNEL_IN_UBI + tar）
+#   ikuai_q6000-emmc   iKuai IK-Q6000 eMMC（MT7986A + eMMC，root=PARTLABEL=rootfs）
+#
+# 机型适配移植自 tvliving/Kwrt devices/mediatek_filogic_ikuai；
+# 主题统一为 luci-theme-vantage，argon 及其配置 app 在构建时移除。
+on:
+  schedule:
+    - cron: '0 3 * * 6'
+  workflow_dispatch:
+    inputs:
+      devices:
+        description: '机型（逗号分隔，留空=全部三个）'
+        required: false
+        default: 'ikuai_q3000,ikuai_q6000,ikuai_q6000-emmc'
+      packages:
+        description: '额外固件包（空格分隔，可留空）'
+        required: false
+        default: ''
+      make_release:
+        description: '是否发布到 Release'
+        required: false
+        default: true
+        type: boolean
+      use_ccache:
+        description: '是否使用 ccache 加速（首次编译会更慢）'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: xwrt-ikuai-q3000-q6000-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  TZ: Asia/Shanghai
+  TARGET: mediatek
+  SUBTARGET: filogic
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 4G
+
+jobs:
+  # ============================================================
+  # Job 1：解析机型矩阵
+  # ============================================================
+  prepare:
+    name: 🧭 解析机型
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - name: 生成机型矩阵
+        id: plan
+        env:
+          DEVICE_INPUT: ${{ inputs.devices || '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          # 机型 -> (显示名, 设备树, compatible)
+          meta = {
+              'ikuai_q3000': ('iKuai Q3000 (SPI-NAND)', 'mt7981b-ikuai-q3000', 'ikuai,q3000'),
+              'ikuai_q6000': ('iKuai Q6000 NAND', 'mt7986a-ikuai-q6000', 'ikuai,q6000'),
+              'ikuai_q6000-emmc': ('iKuai Q6000 eMMC', 'mt7986a-ikuai-q6000-emmc', 'ikuai,q6000-emmc'),
+          }
+          raw = (os.environ.get('DEVICE_INPUT') or '').replace('，', ',')
+          devs = [d.strip() for d in raw.split(',') if d.strip()] or list(meta)
+          bad = [d for d in devs if d not in meta]
+          if bad:
+              raise SystemExit('未知机型: %s（可选: %s）' % (' '.join(bad), ' '.join(meta)))
+          inc = [{'device': d, 'name': meta[d][0], 'dts': meta[d][1], 'compatible': meta[d][2]} for d in devs]
+          out = open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8')
+          out.write('matrix=%s\n' % json.dumps({'include': inc}))
+          out.write('count=%d\n' % len(inc))
+          out.close()
+          print('机型矩阵:', json.dumps(inc, ensure_ascii=False))
+          PY
+
+  # ============================================================
+  # Job 2：矩阵编译（每个机型一个 job，互不阻塞）
+  # ============================================================
+  build:
+    name: 🏗️ ${{ matrix.name }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      DEVICE: ${{ matrix.device }}
+
+    steps:
+      - name: Checkout 源码（本仓库）
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: 记录源码版本
+        id: srcver
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 释放磁盘空间
+        run: |
+          echo "===== 释放前 ====="; df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache /usr/local/share/boost \
+                      /usr/local/lib/node_modules /usr/lib/jvm \
+                      /usr/share/swift /usr/share/miniconda /usr/share/rust \
+                      /usr/share/kotlinc /usr/share/gradle-* /opt/az \
+                      /usr/local/.ghcup /var/lib/snapd /usr/local/share/chromium \
+                      /opt/microsoft /usr/share/sbt 2>/dev/null || true
+          sudo systemctl stop docker docker.socket 2>/dev/null || true
+          sudo rm -rf /var/lib/docker /var/lib/containerd 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/* /home/runner/.cache \
+                      /home/runner/.npm /home/runner/.dotnet 2>/dev/null || true
+          sudo journalctl --vacuum-size=50M 2>/dev/null || true
+          echo "===== 释放后 ====="; df -h / | tail -1
+
+      - name: 安装编译依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+            libelf-dev python3-dev python3-setuptools rsync unzip zlib1g-dev \
+            file wget ccache zstd swig time xsltproc subversion bc patch bzip2 \
+            libtool-bin pkg-config autoconf automake
+          sudo apt-get install -y -qq perl libthread-queue-any-perl 2>/dev/null || true
+
+      - name: 恢复 ccache
+        if: ${{ inputs.use_ccache != false }}
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-xwrt-ikuai-${{ matrix.device }}-${{ steps.srcver.outputs.sha }}
+          restore-keys: |
+            ccache-xwrt-ikuai-${{ matrix.device }}-
+            ccache-xwrt-mediatek-
+
+      - name: ccache 预热配置
+        if: ${{ inputs.use_ccache != false }}
+        run: |
+          ccache --version | head -1
+          ccache -M "$CCACHE_MAXSIZE"
+          ccache -z
+
+      - name: 机型适配自检
+        env:
+          DTS: ${{ matrix.dts }}
+          COMPAT: ${{ matrix.compatible }}
+        run: |
+          set -e
+          echo "机型: $DEVICE / 设备树: $DTS.dts / compatible: $COMPAT"
+          grep -q "define Device/$DEVICE" target/linux/mediatek/image/filogic.mk \
+            || { echo "::error::filogic.mk 缺少 $DEVICE 设备块"; exit 1; }
+          test -f "target/linux/mediatek/dts/$DTS.dts" \
+            || { echo "::error::缺少设备树 $DTS.dts"; exit 1; }
+          grep -q "$COMPAT" target/linux/mediatek/filogic/base-files/etc/board.d/02_network \
+            || { echo "::error::02_network 未登记 $COMPAT"; exit 1; }
+          grep -q "$COMPAT" target/linux/mediatek/dts/$DTS.dts \
+            || { echo "::error::设备树 compatible 与登记不一致"; exit 1; }
+          if [ "${DEVICE%-emmc}" != "$DEVICE" ]; then
+            grep -q "ikuai,q6000-emmc" target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh \
+              || { echo "::error::platform.sh 缺少 eMMC 升级分组"; exit 1; }
+            echo "✔ eMMC 升级分组已确认"
+          else
+            python3 - "$DEVICE" <<'PY'
+          import re, sys
+          dev = sys.argv[1]
+          text = open('target/linux/mediatek/image/filogic.mk', encoding='utf-8').read()
+          m = re.search(r'define Device/%s\n(.*?)\nendef' % re.escape(dev), text, re.S)
+          if not m:
+              raise SystemExit('filogic.mk 缺少 %s 设备块' % dev)
+          if 'KERNEL_IN_UBI := 1' not in m.group(1):
+              raise SystemExit('%s 是 NAND 机型但缺少 KERNEL_IN_UBI' % dev)
+          print('✔ NAND 机型 KERNEL_IN_UBI 已确认')
+          PY
+          fi
+          grep -q 'nvmem-cells = <&eeprom_factory_0>\|mtd-eeprom\|nvmem-cells = <&macaddr' "target/linux/mediatek/dts/$DTS.dts" \
+            || echo "::warning::设备树未显式绑定 WiFi eeprom/MAC，若走 dtsi 继承则正常"
+          echo "✔ 机型适配自检通过"
+
+      - name: 更新 feeds（带重试）
+        run: |
+          set -o pipefail
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds update -a 2>&1 | tee feeds-update.log | tail -15; then ok=1; break; fi
+            echo "::warning::feeds update 第 $i 次失败，10 秒后重试"
+            grep -iE "fatal|error|not found|404" feeds-update.log | head -10 || true
+            sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds update 连续 3 次失败"; exit 1; }
+          ok=0
+          for i in 1 2 3; do
+            if ./scripts/feeds install -a 2>&1 | tee feeds-install.log | tail -5; then ok=1; break; fi
+            echo "::warning::feeds install 第 $i 次失败，10 秒后重试"
+            sleep 10
+          done
+          [ "$ok" = "1" ] || { echo "::error::feeds install 失败"; exit 1; }
+
+      # ---- 默认主题：vantage；argon 主题及其配置 app 彻底移除 ----
+      - name: 注入 vantage 主题并移除 argon / bootstrap
+        run: |
+          set -e
+          rm -rf /tmp/kiddin9
+          git clone -q --depth 1 --filter=blob:none --sparse \
+            https://github.com/kiddin9/op-packages.git /tmp/kiddin9
+          (cd /tmp/kiddin9 && git sparse-checkout set luci-theme-vantage luci-app-vantage)
+          cp -a /tmp/kiddin9/luci-theme-vantage /tmp/kiddin9/luci-app-vantage package/
+          test -f package/luci-theme-vantage/Makefile || { echo "::error::vantage 主题包缺失"; exit 1; }
+          echo "✔ vantage 主题已加入 package/"
+
+          rm -rf feeds/luci/themes/luci-theme-argon \
+                 feeds/luci/applications/luci-app-argon-config \
+                 feeds/luci/themes/luci-theme-bootstrap 2>/dev/null || true
+
+          # luci / luci-light 集合硬依赖 bootstrap，删包前先把依赖引用改指向 vantage，避免 apk 悬空依赖
+          find feeds/luci -type f \( -name 'Makefile' -o -name '*.mk' \) -print0 2>/dev/null \
+            | xargs -0 -r sed -i \
+                -e 's/luci-theme-bootstrap/luci-theme-vantage/g' \
+                -e 's/luci-theme-argon/luci-theme-vantage/g' \
+                -e 's/luci-app-argon-config/luci-app-vantage/g'
+          find feeds/luci -type d \( -name 'luci-theme-bootstrap' -o -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
+            -prune -exec rm -rf {} + 2>/dev/null || true
+          echo "✔ 已移除 argon / bootstrap，依赖已改指向 vantage"
+
+          mkdir -p files/etc/uci-defaults
+          cat > files/etc/uci-defaults/99-default-theme-vantage <<'EOF'
+          #!/bin/sh
+          uci -q get luci.main >/dev/null 2>&1 || uci set luci.main=core
+          uci set luci.main.mediaurlbase='/luci-static/vantage'
+          uci commit luci
+          exit 0
+          EOF
+          chmod +x files/etc/uci-defaults/99-default-theme-vantage
+          echo "✔ 默认主题已锁定为 luci-theme-vantage"
+
+      - name: 生成 .config（${{ matrix.name }} + vantage 主题）
+        env:
+          PACKAGES: ${{ inputs.packages || '' }}
+        run: |
+          set -e
+          cat > .config <<EOF
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_filogic=y
+          # 单机型：直接选 choice 成员（不带 DEVICE_ 前缀），TARGET_PROFILE 由 kconfig 自动推导
+          CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          CONFIG_TARGET_ROOTFS_PARTSIZE=1024
+          # ---- 主题：vantage 为默认，argon / bootstrap 关闭 ----
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-compat=y
+          CONFIG_PACKAGE_luci-theme-vantage=y
+          CONFIG_PACKAGE_luci-app-vantage=y
+          # CONFIG_PACKAGE_luci-theme-argon is not set
+          # CONFIG_PACKAGE_luci-app-argon-config is not set
+          # CONFIG_PACKAGE_luci-theme-bootstrap is not set
+          # ---- WiFi：完整 wpad + 无线驱动 + 监管数据库 ----
+          # CONFIG_PACKAGE_wpad-basic-wolfssl is not set
+          # CONFIG_PACKAGE_wpad-basic-mbedtls is not set
+          CONFIG_PACKAGE_wpad-wolfssl=y
+          CONFIG_PACKAGE_kmod-mt7915e=y
+          CONFIG_PACKAGE_wireless-regdb=y
+          CONFIG_PACKAGE_iwinfo=y
+          CONFIG_PACKAGE_luci-mod-network=y
+          # ---- 中文界面 ----
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_LUCI_LANG_en=y
+          # ---- 常用组件 ----
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_kmod-mtd-rw=y
+          CONFIG_PACKAGE_block-mount=y
+          CONFIG_PACKAGE_automount=y
+          EOF
+          # MT7981 机型补 mt7981 固件、MT7986 机型补 mt7986 固件
+          case "$DEVICE" in
+            ikuai_q3000)
+              echo "CONFIG_PACKAGE_kmod-mt7981-firmware=y" >> .config
+              echo "CONFIG_PACKAGE_mt7981-wo-firmware=y" >> .config
+              ;;
+            *)
+              echo "CONFIG_PACKAGE_kmod-mt7986-firmware=y" >> .config
+              echo "CONFIG_PACKAGE_mt7986-wo-firmware=y" >> .config
+              ;;
+          esac
+          if [ -n "$PACKAGES" ]; then
+            for p in $PACKAGES; do echo "CONFIG_PACKAGE_$p=y" >> .config; done
+          fi
+
+          make -j1 defconfig > defconfig.log 2>&1 || { tail -40 defconfig.log; echo "::error::make defconfig 失败"; exit 1; }
+
+          echo "===== 关键配置校验（$DEVICE）====="
+          grep -E 'CONFIG_TARGET_PROFILE|CONFIG_TARGET_mediatek_filogic_DEVICE_'"$DEVICE"'|CONFIG_PACKAGE_luci-theme-vantage|CONFIG_PACKAGE_luci-theme-argon|CONFIG_PACKAGE_wpad' .config || true
+
+          fail=0
+          grep -q "CONFIG_TARGET_mediatek_filogic_DEVICE_$DEVICE=y" .config || { echo "::error::机型符号 $DEVICE 未启用"; fail=1; }
+          grep -q "CONFIG_TARGET_PROFILE=\"DEVICE_$DEVICE\"" .config || { echo "::error::TARGET_PROFILE 未指向 DEVICE_$DEVICE"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-vantage=y' .config || { echo "::error::默认主题 vantage 未选中"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-argon=y' .config && { echo "::error::argon 主题仍然存在"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-app-argon-config=y' .config && { echo "::error::argon 配置 app 仍然存在"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_luci-theme-bootstrap=y' .config && { echo "::error::bootstrap 主题仍被选中"; fail=1; }
+          grep -qE '^CONFIG_PACKAGE_wpad(-basic|-mesh)?(-wolfssl|-mbedtls|-openssl)?=y$' .config || { echo "::error::缺少 wpad，固件会没有 WiFi 功能"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_kmod-mt7915e=y' .config || { echo "::error::缺少 MT7915E 无线驱动"; fail=1; }
+          grep -q 'CONFIG_PACKAGE_wireless-regdb=y' .config || { echo "::error::缺少 wireless-regdb"; fail=1; }
+          [ "$fail" = "0" ] || exit 1
+          echo "✔ .config 校验通过（含 WiFi 组件）"
+
+      - name: 预下载软件包
+        run: make download -j8 || echo "::warning::make download 有失败项，构建时会重试"
+
+      - name: 编译
+        run: |
+          set -o pipefail
+          echo "机型: $DEVICE | 并发数: $(nproc)"
+          df -h / | tail -1
+          rc=0
+          make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j"$(( $(nproc) + 1 ))" 2>&1 | tee build.log || rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::并行编译失败，用 -j1 V=s 重跑捕获真实错误"
+            FAILED=$(grep -oE "ERROR: \S+ failed to build( \(build variant: \S+\))?" build.log | awk '{print $2}' | sort -u || true)
+            if [ -z "$FAILED" ]; then
+              make VERSION_DIST="xwrt-$(date +%Y%m%d)" -j1 V=s 2>&1 | tee error.log || true
+            else
+              for p in $FAILED; do
+                case "$p" in
+                  package/*) echo "===== V=s 复现 $p ====="; make -j1 V=s "$p/compile" 2>&1 | tee -a error.log || true ;;
+                  *) echo "===== V=s 复现 target ====="; make -j1 V=s 2>&1 | tee -a error.log || true ;;
+                esac
+              done
+            fi
+            echo "===== error.log 尾部 150 行 ====="
+            tail -n 150 error.log 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: 失败诊断
+        if: failure()
+        run: |
+          for f in defconfig.log feeds-update.log feeds-install.log build.log error.log; do
+            [ -f "$f" ] && { echo "===== $f （尾部 40 行） ====="; tail -40 "$f" || true; }
+          done
+          head -15 .config 2>/dev/null || true
+
+      - name: 上传编译日志（失败时用于排查）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.device }}
+          path: |
+            *.log
+            .config
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 校验并收集产物
+        run: |
+          set -e
+          mkdir -p out
+          DIR="bin/targets/$TARGET/$SUBTARGET"
+          echo "产物目录: $DIR"; ls -la "$DIR" 2>/dev/null | head -20 || true
+          find "$DIR" -maxdepth 1 -type f \
+            \( -name "*$DEVICE*" -o -name 'sha256sums' -o -name 'profiles.json' \) \
+            -exec cp {} out/ \; 2>/dev/null || true
+          ls -lh out || true
+          ls out/*"$DEVICE"*sysupgrade* >/dev/null 2>&1 \
+            || { echo "::error::$DEVICE 没有产出 sysupgrade 镜像"; exit 1; }
+          case "$DEVICE" in
+            *-emmc) : ;;
+            *)
+              ls out/*"$DEVICE"*factory* >/dev/null 2>&1 \
+                || { echo "::error::$DEVICE 缺少 factory 镜像（NAND 机型必须双产物）"; exit 1; }
+              ;;
+          esac
+          (cd out && sha256sum * > sha256sums.local.txt)
+          {
+            echo "## 🏗️ ${{ matrix.name }}"
+            echo ""
+            echo "- 机型符号: \`$DEVICE\` / 设备树: \`${{ matrix.dts }}\`"
+            echo "- 源码: ${{ steps.srcver.outputs.sha }}"
+            echo "- 主题: luci-theme-vantage（默认，已移除 argon / bootstrap）"
+            echo ""
+            echo "| 文件 | 大小 |"
+            echo "|---|---|"
+            ls -l out | awk 'NR>1 {printf "| %s | %s |\n", $9, $5}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: images-${{ matrix.device }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
+
+  # ============================================================
+  # Job 3：发布 Release（汇总各机型产物；漏发可用 publish-artifact-release.yml 按 run_id 补发）
+  # ============================================================
+  release:
+    name: 📦 发布 Release
+    needs: build
+    if: |
+      github.event_name == 'schedule' || inputs.make_release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 下载全部机型产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: images-*
+          merge-multiple: true
+          path: rel
+
+      - name: 创建 Release（xwrt-ikuai-q3000-q6000-日期，同日重跑自动加 -r<run号>）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd rel
+          ls -lh
+          TAG="xwrt-ikuai-q3000-q6000-$(TZ=Asia/Shanghai date +%Y%m%d)"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            TAG="$TAG-r${GITHUB_RUN_NUMBER}"
+          fi
+          cat > notes.md <<EOF
+          X-Wrt 自动编译 · iKuai Q3000 / Q6000（移植自 tvliving/Kwrt）
+
+          - 触发方式: ${{ github.event_name }}
+          - 覆盖机型: ikuai_q3000 / ikuai_q6000 / ikuai_q6000-emmc
+          - 主题: luci-theme-vantage（默认；已移除 argon / bootstrap）
+          - WiFi: 完整 wpad + MT7915E + 对应 MT7981/MT7986 固件
+          - 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          NAND 机型为 KERNEL_IN_UBI + sysupgrade-tar（factory 用于首次刷入）；
+          eMMC 机型为 root=PARTLABEL=rootfs，仅出 sysupgrade。
+          EOF
+          gh release create "$TAG" ./* \
+            --title "X-Wrt iKuai Q3000 / Q6000 · $TAG" \
+            --notes-file notes.md \
+            --latest

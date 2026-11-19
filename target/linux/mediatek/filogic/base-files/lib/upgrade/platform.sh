@@ -373,6 +373,7 @@ platform_do_upgrade() {
 	glinet,gl-x3000|\
 	glinet,gl-xe3000|\
 	cmcc,xr30-emmc|\
+	ikuai,q6000-emmc|\
 	hiveton,h5000m|\
 	huasifei,wh3000|\
 	huasifei,wh3000-pro-emmc|\
@@ -646,6 +647,7 @@ platform_check_image() {
 	creatlentem,clt-r30b1|\
 	creatlentem,clt-r30b1-112m|\
 	cmcc,xr30-emmc|\
+	ikuai,q6000-emmc|\
 	hiveton,h5000m|\
 	nradio,c8-668gl)
 		# tar magic `ustar`
@@ -703,6 +705,7 @@ platform_copy_config() {
 	glinet,gl-x3000|\
 	glinet,gl-xe3000|\
 	cmcc,xr30-emmc|\
+	ikuai,q6000-emmc|\
 	globitel,bt-r320|\
 	hiveton,h5000m|\
 	huasifei,wh3000|\
