@@ -2472,7 +2472,7 @@ define Device/globitel_bt-r320
   DEVICE_MODEL := BT-R320
   DEVICE_DTS := mt7981b-globitel-bt-r320
   DEVICE_DTS_DIR := ../dts
-  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware 	f2fsck mkf2fs
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware f2fsck mkf2fs
   KERNEL_LOADADDR := 0x44000000
   KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
   KERNEL_INITRAMFS := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
@@ -5290,7 +5290,7 @@ define Device/ikuai_q6000-emmc
   DEVICE_DTS := mt7986a-ikuai-q6000-emmc
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ikuai,q6000-emmc
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-mtd-rw 	f2fsck mkf2fs kmod-mmc
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-mtd-rw f2fsck mkf2fs kmod-mmc
   KERNEL_INITRAMFS := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
