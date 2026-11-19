@@ -330,9 +330,14 @@ define Build/initrd-kernel
 		DST="$@.initrd/lib/modules/$(LINUX_VERSION)"; \
 		pick() { \
 			for m in $$2; do \
-				[ -f "$$SRC/$$m.ko" ] || continue; \
-				$(CP) "$$SRC/$$m.ko" "$$DST/"; \
-				return 0; \
+				if [ -f "$$SRC/$$m.ko" ]; then \
+					$(CP) "$$SRC/$$m.ko" "$$DST/"; \
+					return 0; \
+				fi; \
+				if [ -f "$$SRC/modules.builtin" ] && grep -q "/$$m\.ko$$" "$$SRC/modules.builtin"; then \
+					echo "$$1 已内建内核（$$m），无需拷入 initrd"; \
+					return 0; \
+				fi; \
 			done; \
 			echo "ERROR: initrd 缺少 $$1 模块（候选: $$2），$$SRC 现有: $$(ls $$SRC | tr '\n' ' ')" >&2; \
 			return 1; \
@@ -341,7 +346,7 @@ define Build/initrd-kernel
 		pick crc32c "crc32c_generic crc32c-cryptoapi"; \
 		pick mmc-mtk "mtk-sd mtk_sd"; \
 		pick mmc-block "mmc_block"; \
-		pick xhci-mtk "xhci-mtk-hcd xhci-mtk"; \
+		pick xhci-mtk "xhci-mtk-hcd xhci-mtk xhci-hcd"; \
 		pick usb-storage "usb-storage"; \
 		pick scsi-core "sd_mod"; \
 	)
