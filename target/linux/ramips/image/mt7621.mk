@@ -4079,7 +4079,7 @@ define Device/xwrt_wr1800k-ax-norplusemmc
   DEVICE_PACKAGES += kmod-ata-ahci kmod-sdhci-mt7620 kmod-mt7915-firmware \
 		     kmod-usb3 kmod-i2c-core kmod-eeprom-at24 i2c-tools \
 		     uboot-envtools partx-utils mkf2fs e2fsprogs kmod-fs-msdos \
-		     base-config-setting-ext4fs
+		     base-config-setting-ext4fs blkid
   SUPPORTED_DEVICES += mt7621-dm2-t-mb5eu-v01-nor
   LOADER_TYPE := bin
   KERNEL := kernel-bin | append-dtb | lzma | loader-kernel | uImage none
