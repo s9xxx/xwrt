@@ -186,8 +186,10 @@ jobs:
           cat > .config <<EOF
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_PROFILE="DEVICE_cudy_tr3000-512mb-v1"
-          # CONFIG_TARGET_MULTI_PROFILE is not set
+          # 机型选择必须走 MULTI_PROFILE + 单机型符号；直接写 TARGET_PROFILE 会被 kconfig 丢弃
+          CONFIG_TARGET_MULTI_PROFILE=y
+          # CONFIG_TARGET_ALL_PROFILES is not set
+          CONFIG_TARGET_PER_DEVICE_ROOTFS=y
           CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cudy_tr3000-512mb-v1=y
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
           CONFIG_TARGET_ROOTFS_PARTSIZE=160

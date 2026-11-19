@@ -363,6 +363,7 @@ platform_do_upgrade() {
 	acer,predator-w6d|\
 	acer,vero-w6m|\
 	airpi,ap3000m|\
+	philips,hy3000|\
 	arcadyan,mozart|\
 	benton,sn-r1|\
 	glinet,gl-be14000|\
@@ -689,6 +690,7 @@ platform_copy_config() {
 	acer,predator-w6d|\
 	acer,vero-w6m|\
 	airpi,ap3000m|\
+	philips,hy3000|\
 	arcadyan,mozart|\
 	benton,sn-r1|\
 	cmcc,rax3000m-emmc-ubootlayout|\

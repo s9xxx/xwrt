@@ -1,0 +1,31 @@
+#!/bin/sh
+# Philips HY3000（MT7981B 双频 WiFi）无线可用性加固
+#
+# 该机型的无线校准数据存放在 eMMC 的 factory 分区（DTS 里以 nvmem eeprom 绑定），
+# 很多移植固件刷完后 /etc/config/wireless 里 radio 是 disabled 状态，
+# 表现为「网络菜单里没有 WiFi 选项」。这里在首次启动时兜底处理：
+#   1) 生成 /etc/config/wireless（若不存在）
+#   2) 强制开启所有 radio，并固定国家码 CN
+#   3) 打开 802.11k/v，便于多 AP / mesh 场景漫游
+. /lib/functions.sh
+
+[ "$(board_name)" = "philips,hy3000" ] || exit 0
+
+wifi config 2>/dev/null || true
+
+# 1) 开启 radio，固定国家码，避免低信号下踢客户端
+for r in $(uci -q show wireless | sed -n 's/^wireless\.\([^.]*\)=wifi-device$/\1/p'); do
+	uci set wireless.$r.disabled='0'
+	uci set wireless.$r.country='CN'
+	uci set wireless.$r.disassoc_low_ack='0'
+done
+
+# 2) 打开 802.11k / 802.11v（漫游与负载信息）
+for i in $(uci -q show wireless | sed -n 's/^wireless\.\([^.]*\)=wifi-iface$/\1/p'); do
+	uci set wireless.$i.ieee80211k='1'
+	uci set wireless.$i.ieee80211v='1'
+done
+
+uci -q commit wireless || true
+
+exit 0
