@@ -1,0 +1,99 @@
+name: 📦 把已有运行的产物发布为 Release
+
+# 用途：某次编译已成功、产物已在 Actions 里（run 页面的 Artifacts），但没有发 Release 时，
+# 不用重新编译，直接把那次运行的产物打包发布成 Release。
+#
+# 用法：Actions → 本 workflow → Run workflow，填入目标运行的 run_id
+#   run_id 取运行页面 URL 里的数字，例如
+#   https://github.com/s9xxx/xwrt/actions/runs/44439392659 → 44439392659
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: '要发布的 Actions 运行 ID（运行 URL 里的数字）'
+        required: true
+        type: string
+      tag:
+        description: 'Release tag（留空自动用 xwrt-run-<run_id>）'
+        required: false
+        default: ''
+        type: string
+      title:
+        description: 'Release 标题（留空自动生成）'
+        required: false
+        default: ''
+        type: string
+      prerelease:
+        description: '是否标记为 Pre-release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    name: 📦 发布运行 ${{ inputs.run_id }} 的产物
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: 下载该运行的产物
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -e
+          echo "来源运行: $RUN_ID"
+          gh run view "$RUN_ID" --json conclusion,headSha,displayTitle,event || true
+          gh run download "$RUN_ID" -D dl
+          echo "===== 下载到的文件 ====="
+          find dl -type f | head -40
+
+      - name: 汇总固件文件
+        run: |
+          set -e
+          mkdir -p rel
+          # 展平所有产物目录，只保留固件与校验类文件
+          find dl -type f \( -name '*.bin' -o -name '*.itb' -o -name '*.manifest' \
+               -o -name 'sha256sums' -o -name 'sha256sums.txt' -o -name 'profiles.json' \) \
+            -exec cp -n {} rel/ \;
+          ls -lh rel || true
+          count=$(find rel -maxdepth 1 -type f | wc -l)
+          [ "$count" -gt 0 ] || { echo "::error::运行 $RUN_ID 没有可发布的固件产物（检查该 run 的 Artifacts）"; exit 1; }
+          (cd rel && sha256sum * > MANUAL-sha256sums.txt && cat MANUAL-sha256sums.txt)
+          echo "可发布文件数: $count"
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          TAG_INPUT: ${{ inputs.tag }}
+          TITLE_INPUT: ${{ inputs.title }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -e
+          TAG="${TAG_INPUT:-xwrt-run-${RUN_ID}}"
+          TITLE="${TITLE_INPUT:-X-Wrt 产物发布 · run ${RUN_ID}}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::warning::tag $TAG 已存在，改用 $TAG-r${GITHUB_RUN_NUMBER}"
+            TAG="$TAG-r${GITHUB_RUN_NUMBER}"
+          fi
+          FLAG=""
+          if [ "$PRERELEASE" = "true" ]; then FLAG="--prerelease"; fi
+          cat > notes.md <<EOF
+          由已有运行产物手动发布（不重新编译，不含代码变更）。
+
+          - 来源运行: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}
+          - 发布作业: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - 校验: 附件内 MANUAL-sha256sums.txt 为本次发布文件的校验和
+          EOF
+          gh release create "$TAG" rel/* \
+            --title "$TITLE" \
+            --notes-file notes.md \
+            $FLAG \
+            --latest
+          echo "✔ 已发布: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"

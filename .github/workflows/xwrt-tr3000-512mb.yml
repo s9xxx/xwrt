@@ -332,7 +332,7 @@ jobs:
         with:
           name: images-tr3000-512mb
           path: out/
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
 
   # ============================================================

@@ -383,7 +383,7 @@ jobs:
         with:
           name: images-${{ matrix.device }}
           path: out/
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
 
   # ============================================================
