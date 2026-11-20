@@ -110,6 +110,16 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+
+	rtl837x-gsw@1 {
+		compatible = "realtek,rtl837x";
+		rtl837x,mdio = <&mdio_bus>;
+		rtl837x,reset-pin = <&pio 3 GPIO_ACTIVE_HIGH>;
+		rtl837x,cpu-port = <0x00>;
+		rtl837x,smi-addr = <0x1d>;
+		rtl837x,sds0mode = "10g-kr";
+		// ethernet = <&gmac2>;
+	};
 };
 
 &cpu0 {
@@ -155,17 +165,6 @@
 		full-duplex;
 		pause;
 		asym-pause;
-	};
-};
-
-&mdio_bus {
-	rtl837x-gsw@1 {
-		compatible = "realtek,rtl837x";
-		reg = <29>;
-		reset-gpios = <&pio 3 GPIO_ACTIVE_HIGH>;
-		rtl837x,cpu-port = <0>;
-		rtl837x,sds0mode = "10g-kr";
-		ethernet = <&gmac2>;
 	};
 };
 
@@ -252,9 +251,7 @@
 &pcie0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie0_1_pins>;
-	wifi-reset-gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
-	wifi-reset-msleep = <100>;
-	max-link-width = <0x02>;
+	reset-gpios = <&pio 7 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
 	pcie@0,0 {
@@ -372,7 +369,7 @@
 			};
 
 			partition@180000 {
-				label = "Factory";
+				label = "factory";
 				reg = <0x180000 0x200000>;
 				read-only;
 

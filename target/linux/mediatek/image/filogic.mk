@@ -5840,7 +5840,7 @@ define Device/ruijie_rg-be72-pro
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-be72-pro
   KERNEL_IN_UBI := 1
-  DEVICE_PACKAGES := kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-phy-mediatek-2p5g mt7988-2p5g-phy-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
+  DEVICE_PACKAGES := mt7988-2p5g-phy-firmware kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += ruijie_rg-be72-pro
@@ -5853,10 +5853,23 @@ define Device/ruijie_rg-be72-pro-mod
   DEVICE_DTS_DIR := ../dts
   SUPPORTED_DEVICES += ruijie,rg-be72-pro-mod
   KERNEL_IN_UBI := 1
-  DEVICE_PACKAGES := kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-phy-mediatek-2p5g mt7988-2p5g-phy-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
+  DEVICE_PACKAGES := mt7988-2p5g-phy-firmware kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 swconfig kmod-rtl837x_gsw
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += ruijie_rg-be72-pro-mod
+
+define Device/ruijie_rg-be72-pro-dsa-mod
+  DEVICE_VENDOR := Ruijie
+  DEVICE_MODEL := RG-BE72 Pro DSA
+  DEVICE_VARIANT := (U-Boot mod)
+  DEVICE_DTS := mt7988d-ruijie-rg-be72-pro-dsa-mod
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += ruijie,rg-be72-pro-dsa-mod
+  KERNEL_IN_UBI := 1
+  DEVICE_PACKAGES := mt7988-2p5g-phy-firmware kmod-mt7992-23-firmware kmod-mt7992-firmware mt7988-wo-firmware kmod-usb3 swconfig kmod-rtl837x_gsw kmod-rtl8372n_dsa
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += ruijie_rg-be72-pro-dsa-mod
 
 define Device/ruijie_rg-x30e-pro-ubi
   DEVICE_VENDOR := Ruijie

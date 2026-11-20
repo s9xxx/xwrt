@@ -14,7 +14,7 @@ on:
       devices:
         description: '机型（逗号分隔，留空=两个都编）'
         required: false
-        default: 'ruijie_rg-be72-pro,ruijie_rg-be72-pro-mod'
+        default: 'ruijie_rg-be72-pro,ruijie_rg-be72-pro-mod,ruijie_rg-be72-pro-dsa-mod'
       packages:
         description: '额外固件包（空格分隔，可留空）'
         required: false
@@ -66,6 +66,7 @@ jobs:
           meta = {
               'ruijie_rg-be72-pro': ('Ruijie RG-BE72 Pro', 'mt7988d-ruijie-rg-be72-pro'),
               'ruijie_rg-be72-pro-mod': ('Ruijie RG-BE72 Pro (U-Boot mod)', 'mt7988d-ruijie-rg-be72-pro-mod'),
+              'ruijie_rg-be72-pro-dsa-mod': ('Ruijie RG-BE72 Pro DSA (U-Boot mod)', 'mt7988d-ruijie-rg-be72-pro-dsa-mod'),
           }
           raw = (os.environ.get('DEVICE_INPUT') or '').replace('，', ',')
           devs = [d.strip() for d in raw.split(',') if d.strip()] or list(meta)
@@ -198,6 +199,7 @@ jobs:
           CONFIG_PACKAGE_luci-theme-vantage=y
           # BE72 专用：RTL837x 交换芯片驱动 + 2.5G PHY 驱动/固件
           CONFIG_PACKAGE_kmod-rtl837x_gsw=y
+          CONFIG_PACKAGE_kmod-rtl8372n_dsa=y
           CONFIG_PACKAGE_kmod-phy-mediatek-2p5g=y
           CONFIG_PACKAGE_mt7988-2p5g-phy-firmware=y
           CONFIG_PACKAGE_kmod-swconfig=y
@@ -304,11 +306,11 @@ jobs:
           X-Wrt 自动编译 · 锐捷 RG-BE72 Pro（MT7988D）
 
           - 触发方式: ${{ github.event_name }}
-          - 覆盖机型: ruijie_rg-be72-pro / ruijie_rg-be72-pro-mod
+          - 覆盖机型: ruijie_rg-be72-pro / ruijie_rg-be72-pro-mod / ruijie_rg-be72-pro-dsa-mod
           - 主题: luci-theme-vantage（默认；已移除 argon / bootstrap）
           - 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          机型来源 y9858/be72pro → RuijieNetworksCommunity/MT798X-6.6-24.10（同分支）。
+          适配基准：airjinkela/immortalwrt-main（含 -dsa-mod 变体），驱动 kmod-rtl837x_gsw + kmod-rtl8372n_dsa。
           漏发 Release 时可用 publish-artifact-release.yml 按 run_id 补发。
           EOF
           FILES=$(ls | grep -vx 'notes.md')
