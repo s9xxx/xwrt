@@ -4,6 +4,9 @@
 AN7581、AN7583 与 MT7992/MT7996 的单链路 AP 客户端。代码和设备树已做
 编译、补丁回放及模拟回归验证，尚未完成实机 PCIe、固件握手和流量验证。
 
+AN7563 资料、AN75xx 上游进展及 AN7552 源码固件的接口对照见
+[AN75xx 硬件转发资料与上游对照](README.an75xx-upstream.md)。
+
 ## 转发范围
 
 以下为代码允许安装的路径；实际安装还取决于连接学习、客户端授权、
@@ -86,14 +89,17 @@ natflow 后由接收方释放，不再进入普通 RX 转发。
   协议仍需在实际 EVB 上验证；新增 profile 属于接入配置。
 - `an758x-npu-wlan.dtsi` 共享原有无线缓冲区预留，只有无线配置包含它。
   Nokia MD/MF 等无无线设备不预留这些无线缓冲区。
-- NPU V2 的 DMA 地址限定在 `0x80000000` 至 `0xbfffffff`。所有 AN7581/
-  AN7583 配置另预留 1 MiB streaming 池与 1 MiB coherent 池；无线配置
-  分别扩大到 64 MiB 与 8 MiB。两池由内核在该窗口内动态选址，原有
-  firmware、无线缓冲区和 QDMA 预留继续保留。coherent 池供 mailbox 和
-  连续描述符使用，支持 MT7992 的单次 512 KiB 分配；streaming 池供
-  mt76 收发包映射使用。池缺失、未正确挂接或地址越界时拒绝启动 NPU，
-  池耗尽时分配失败，不向不受约束的内存回退。PPE 传给 NPU 的外部
-  缓冲区也须位于该窗口，否则拒绝对应 NPU 操作。
+- NPU V2 核心访问的主机内存限定在 `0x80000000` 至 `0xbfffffff`。
+  AN7581/AN7583 预留一个名为 `dma` 的独占 coherent 池，普通配置为
+  1 MiB，无线配置为 16 MiB，覆盖 MT7996 约 11 MiB 的 rings/RRO/TXD
+  用量和 MT7992 的单次 512 KiB 分配。池由内核在窗口内动态选址，
+  firmware、无线固定缓冲区和 QDMA 预留继续保留。池缺失、未正确挂接
+  或地址越界时拒绝启动 NPU；池耗尽时分配失败，不向全局内存回退。
+  PPE 传给 NPU 核心的缓冲区也须位于该窗口，否则拒绝对应 NPU 操作。
+  mt76 streaming 包映射由 Wi-Fi DMA 引擎使用，保留普通 32 位 DMA
+  映射，不强制进入 restricted-dma-pool。此策略参考
+  [NPU coherent 池 RFC 与实机报告](https://lkml.iu.edu/2610.3/00453.html)，
+  避免对每个包引入不必要的 SWIOTLB 搬运。
 - natflow 保持 8192 个逻辑槽、四路桶的 ABI。AN7581 的物理 PPE bank
   映射沿用现有双 PPE 实现，AN7583 使用单 PPE。AN7563、AN7581、AN7583
   均由基础驱动明确使用 SRAM-only、CPU-direct PPE，不启用 DRAM FOE
@@ -116,6 +122,12 @@ natflow 后由接收方释放，不再进入普通 RX 转发。
 - `941-06-*` 统一确定 AN7563、AN7581、AN7583 的 SRAM-only、CPU-direct
   策略，清除 DRAM 流表配置，并将 SRAM 软件镜像改为普通内存。这项
   基础策略不依赖 995；其他使用 DRAM 流表的平台继续使用 DMA 流表。
+- `942-01-*` 将 AN7581/AN7583 的 NPU DMA 策略收敛到独占 coherent
+  池，解除 streaming 包映射的受限池要求；该策略同样不依赖 995。
+- generic `737-11-*` 回移 PCS/phylink v21 的生命周期和能力更新修复，
+  `942-02-*` 补齐 Airoha PCS provider 的 Kconfig 依赖。
+- `942-03-*` 拆分 Airoha GE PHY 驱动并接入实验校准。AN7581/AN7583
+  启用新驱动，软件校准默认关闭，保留启动程序校准与原有上电行为。
 - `994-01-*` 至 `994-04-*` 提供 PON 数据与控制接口、PPE 出口分类、原生
   TC 撤流和光模块 provider 检查，不依赖 natflow。
 - `995-0001-hwnat-add-natflow-flow-offload-support.patch` 集中提供 natflow
@@ -127,7 +139,7 @@ natflow 后由接收方释放，不再进入普通 RX 转发。
 `AIROHA_PPE_NATFLOW_WLAN` 能力宏选择接口，无此宏时沿用原生 PPE 学习
 回调。natflow 运行时开关不改变基础驱动的流表策略。
 
-mt76 生命周期及接收处理已整合到 `mt76-20261016` 源码包；无线开关透传
+mt76 生命周期及接收处理已整合到当前 `mt76-20261107` 源码包；无线开关透传
 在独立 feeds/x 仓库的 `natflow/patches/100-*`。启用 natflow 无线接入时，
 内核、mt76 和 natflow 三者须配套使用。
 
@@ -139,6 +151,11 @@ ARM64 的以太网、PPE、NPU、PON PCS 和路径相关对象编译；mt76 的 
 新基础策略补丁与刷新后的 995 均可零偏移正反向回放，PPE 对象也分别
 通过 ARM64 编译。168 个主机模拟场景检查七款 SoC 的寄存器、分配及
 NPU PPE 接管路径；其他四个平台的原生寄存器写入序列保持不变。
+
+本次上游回移另验证了 810 个补丁的完整回放、新补丁零偏移，带/不带
+995 的 ARM32/ARM64 驱动对象，以及 28 个设备树（含 overlay 应用）和
+25 套 coherent 池配置；PHY 错误退出和 PCS 广告屏蔽的主机回归通过
+ASan/UBSan。实验校准开启/关闭两种构建均已覆盖。
 
 独立 WED 和内置 xPON V1 源码依赖的公共框架尚未齐备，Kconfig 通过
 `depends on BROKEN` 保持这两个选项不可选，待接入匹配的 MediaTek WED

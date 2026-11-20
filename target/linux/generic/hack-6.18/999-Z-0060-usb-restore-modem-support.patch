@@ -10,7 +10,7 @@
  	{QMI_FIXED_INTF(0x114f, 0x68a2, 8)},    /* Sierra Wireless MC7750 */
 --- a/drivers/usb/serial/option.c
 +++ b/drivers/usb/serial/option.c
-@@ -1280,6 +1280,19 @@ static const struct usb_device_id option
+@@ -1281,6 +1281,19 @@ static const struct usb_device_id option
  	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_RM520N, 0xff, 0xff, 0x30) },
  	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_RM520N, 0xff, 0, 0x40) },
  	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_RM520N, 0xff, 0, 0) },
@@ -30,7 +30,7 @@
  	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, 0x0900, 0xff, 0, 0), /* RM500U-CN */
  	  .driver_info = ZLP },
  	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EC200A, 0xff, 0, 0) },
-@@ -2413,6 +2426,8 @@ static const struct usb_device_id option
+@@ -2418,6 +2431,8 @@ static const struct usb_device_id option
  	  .driver_info = RSVD(4) },
  	{ USB_DEVICE_INTERFACE_CLASS(0x2020, 0x2033, 0xff),			/* BroadMobi BM806U */
  	  .driver_info = RSVD(4) },
@@ -39,8 +39,8 @@
  	{ USB_DEVICE_INTERFACE_CLASS(0x2020, 0x2060, 0xff),			/* BroadMobi BM818 */
  	  .driver_info = RSVD(4) },
  	{ USB_DEVICE_INTERFACE_CLASS(0x2020, 0x4000, 0xff) },			/* OLICARD300 - MT6225 */
-@@ -2461,6 +2476,10 @@ static const struct usb_device_id option
- 	{ USB_DEVICE_AND_INTERFACE_INFO(0x04b7, 0x8217, 0xff, 0xff, 0x60) },
+@@ -2462,6 +2477,10 @@ static const struct usb_device_id option
+ 	{ USB_DEVICE_INTERFACE_CLASS(0x1286, 0x4e3c, 0xff) },			/* ASR modem */
  	{ USB_DEVICE(0x1508, 0x1001),						/* Fibocom NL668 (IOT version) */
  	  .driver_info = RSVD(4) | RSVD(5) | RSVD(6) },
 +	{ USB_DEVICE(0x1782, 0x4038),					/* Hisense 5G */
@@ -50,7 +50,7 @@
  	{ USB_DEVICE(0x1782, 0x4d10) },						/* Fibocom L610 (AT mode) */
  	{ USB_DEVICE_INTERFACE_CLASS(0x1782, 0x4d11, 0xff) },			/* Fibocom L610 (ECM/RNDIS mode) */
  	{ USB_DEVICE_AND_INTERFACE_INFO(0x2cb7, 0x0001, 0xff, 0xff, 0xff) },	/* Fibocom L716-EU (ECM/RNDIS mode) */
-@@ -2564,6 +2583,12 @@ static const struct usb_device_id option
+@@ -2581,6 +2600,12 @@ static const struct usb_device_id option
  	  .driver_info = NCTRL(1) },
  	{ USB_DEVICE_INTERFACE_CLASS(0x1bbb, 0x0640, 0xff),			/* TCL IK512 ECM */
  	  .driver_info = NCTRL(3) },
@@ -63,7 +63,7 @@
  	{ USB_DEVICE_INTERFACE_CLASS(0x2949, 0x8700, 0xff) },			/* Neoway N723-EA */
  	{ } /* Terminating entry */
  };
-@@ -2640,6 +2665,14 @@ static int option_probe(struct usb_seria
+@@ -2657,6 +2682,14 @@ static int option_probe(struct usb_seria
  	if (device_flags & NUMEP2 && iface_desc->bNumEndpoints != 2)
  		return -ENODEV;
  
