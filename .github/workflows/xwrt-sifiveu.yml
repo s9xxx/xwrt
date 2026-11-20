@@ -692,7 +692,7 @@ jobs:
         run: |
           TAG="xwrt-sifiveu-$(TZ=Asia/Shanghai date +%Y%m%d)"
           if gh release view "$TAG" > /dev/null 2>&1; then
-            TAG="$TAG-r${GITHUB_RUN_NUMBER}"
+            echo "REUSE_RELEASE=1" >> "$GITHUB_ENV"
           fi
           cat > notes.md <<EOF
           X-Wrt 自动编译 · sifiveu 平台（SiFive (RISC-V)）
@@ -707,6 +707,7 @@ jobs:
           每个机型均有独立的 squashfs-sysupgrade 产物。刷机前务必核对机型名与分区布局（-stock / -ubootmod 等变体不可混刷）。
           EOF
           [ -n "$(ls -A rel 2>/dev/null)" ] || { echo "::warning::没有任何产物可发布，跳过发布"; exit 0; }
+          [ "$REUSE_RELEASE" = "1" ] && { gh release upload "$TAG" rel/* --clobber; echo "已更新当日 Release"; exit 0; }
           gh release create "$TAG" rel/* \
             --title "X-Wrt sifiveu 平台 · $TAG" \
             --notes-file notes.md \

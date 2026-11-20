@@ -427,7 +427,7 @@ jobs:
           ls -lh
           TAG="xwrt-mt798x-other-$(TZ=Asia/Shanghai date +%Y%m%d)"
           if gh release view "$TAG" > /dev/null 2>&1; then
-            TAG="$TAG-r${GITHUB_RUN_NUMBER}"
+            echo "REUSE_RELEASE=1" >> "$GITHUB_ENV"
           fi
           cat > notes.md <<EOF
           X-Wrt 自动编译 · MT798x 其余机型（移植自 s9xxx/immortalwrt-mt798x-6.6）
@@ -441,6 +441,7 @@ jobs:
           EOF
           FILES=$(ls | grep -vx 'notes.md')
           [ -n "$FILES" ] || { echo "::warning::没有可发布的固件产物，跳过发布"; exit 0; }
+          [ "$REUSE_RELEASE" = "1" ] && { gh release upload "$TAG" $FILES --clobber; echo "已更新当日 Release"; exit 0; }
           gh release create "$TAG" $FILES \
             --title "X-Wrt MT798x 其余机型 · $TAG" \
             --notes-file ${{ github.workspace }}/rel/notes.md \
