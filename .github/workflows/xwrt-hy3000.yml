@@ -1,14 +1,15 @@
 name: 🧱 X-Wrt Philips HY3000 固件编译
 
-# 每周六 09:00（北京时间 UTC+8）自动编译
+# 每周六 09:00 自动编译已禁用（2026-11-21）
 # GitHub 的 cron 使用 UTC：周六 01:00 UTC = 周六 09:00 北京时间
 # 单机型 workflow：只编译 philips_hy3000（MT7981B + MT7531 + eMMC）
 # 主题：luci-theme-vantage 为默认主题，argon 主题已移除
 # WiFi：机型适配里固定 &wifi（eMMC factory eeprom 校准）+ 首启脚本强制开启双频，
 #       避免出现「网络菜单里没有 WiFi 选项」的情况
 on:
-  schedule:
-    - cron: '0 1 * * 6'
+  # schedule 定时已禁用，仅保留手动触发（Actions 页面 Run workflow）
+  # schedule:
+  #   - cron: '0 1 * * 6'
   workflow_dispatch:
     inputs:
       ref:
